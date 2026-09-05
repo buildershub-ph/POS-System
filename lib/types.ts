@@ -41,6 +41,7 @@ export type ProductVariant = {
   incoming?: number;
   reorderLevel: number;
   location: string;
+  locationId?: string;
   locationCompany?: string;
   availability: VariantAvailability;
   receiptStatus?: "draft" | "verified" | "posted";
@@ -111,4 +112,50 @@ export type InventoryTransactionInput = {
   destinationLocationId?: string;
   reversesTransactionId?: string;
   lines: InventoryLineInput[];
+};
+
+export type SaleStatus = "held" | "quotation" | "completed" | "cancelled";
+export type PaymentMethod = "cash" | "gcash" | "maya" | "bank_transfer" | "card" | "split";
+
+export type SaleLineInput = {
+  variantId: string;
+  locationId: string;
+  quantity: number;
+  sellingUnit: SellingUnit;
+  originalSrp: number;
+  actualSellingPrice: number;
+  discountReason?: string;
+};
+
+export type CreateSaleInput = {
+  status: "held" | "quotation" | "completed";
+  customerName?: string;
+  paymentMethod?: PaymentMethod;
+  notes?: string;
+  lines: SaleLineInput[];
+};
+
+export type SaleLineRecord = {
+  variantId: string;
+  quantity: number;
+  sellingUnit: SellingUnit;
+  originalSrp: number;
+  actualSellingPrice: number;
+  discountReason?: string;
+};
+
+export type SaleRecord = {
+  id: string;
+  saleNumber: number;
+  status: SaleStatus;
+  customerName?: string;
+  paymentMethod?: PaymentMethod;
+  notes?: string;
+  inventoryTransactionId?: string;
+  createdAt: string;
+  completedAt?: string;
+  totalAmount: number;
+  totalSrp: number;
+  lineCount: number;
+  lines: SaleLineRecord[];
 };

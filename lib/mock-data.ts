@@ -12,6 +12,10 @@ export function stockStatus(product: ProductVariant) {
   return "in_stock" as const;
 }
 
+export function invoiceNumber(saleNumber: number) {
+  return `INV-${String(saleNumber).padStart(4, "0")}`;
+}
+
 export function formatPeso(value?: number | null) {
   if (value == null) return "SRP pending";
   return new Intl.NumberFormat("en-PH", {

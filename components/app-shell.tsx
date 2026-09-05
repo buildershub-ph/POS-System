@@ -20,7 +20,7 @@ const navItems = [
   { href: "/receive", label: "Receive Stock", icon: "↧", permission: "receiveStock" as const },
   { href: "/inventory?view=low-stock", label: "Low Stock", icon: "!" },
   { href: "/scan", label: "Scan Product", icon: "⌗" },
-  { href: "/inventory?view=transactions", label: "Transactions", icon: "⇄" },
+  { href: "/transactions", label: "Transactions", icon: "⇄" },
 ];
 
 function initials(name?: string) {
@@ -110,7 +110,7 @@ export function AppShell({
         <Link className="mobile-nav__centre" href={salesMode ? "/cashier" : "/scan"}>
           <span>{salesMode ? "▤" : "⌗"}</span><small>{salesMode ? "Cashier" : "Scan"}</small>
         </Link>
-        <Link className={pathname.startsWith("/receive") || pathname.includes("transactions") ? "is-active" : ""} href={can(role, "receiveStock") ? "/receive" : "/inventory?view=transactions"}><span>↧</span><small>Activity</small></Link>
+        <Link className={pathname.startsWith("/receive") || pathname.startsWith("/transactions") ? "is-active" : ""} href={can(role, "receiveStock") ? "/receive" : "/transactions"}><span>↧</span><small>Activity</small></Link>
         <button onClick={logout} type="button"><span>⏻</span><small>Sign out</small></button>
       </nav>
     </div>

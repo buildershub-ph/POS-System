@@ -39,12 +39,12 @@ test("server-renders the inventory dashboard", async () => {
   const response = await fetch(`${BASE_URL}/`);
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /Builder&#x27;s Hub/);
+  assert.match(html, /Builders Hub/);
   assert.doesNotMatch(html, /unit cost|landed cost|gross margin/i);
 });
 
 test("core workflow routes render", async () => {
-  for (const path of ["/inventory", "/receive", "/scan", "/cashier", "/login"]) {
+  for (const path of ["/inventory", "/receive", "/scan", "/cashier", "/login", "/transactions"]) {
     const response = await fetch(`${BASE_URL}${path}`);
     assert.equal(response.status, 200, `${path} should render`);
     assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);

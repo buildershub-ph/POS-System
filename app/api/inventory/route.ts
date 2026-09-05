@@ -21,6 +21,7 @@ type CatalogueRow = {
   reorder_level: number | string;
   available_quantity: number | string;
   incoming_quantity: number | string;
+  default_location_id: string | null;
   default_location: string | null;
   default_location_company: string | null;
   availability: VariantAvailability;
@@ -71,6 +72,7 @@ function toPortalProduct(row: CatalogueRow): ProductVariant {
     incoming,
     reorderLevel: number(row.reorder_level),
     location: row.default_location ?? "Location pending",
+    locationId: row.default_location_id ?? undefined,
     locationCompany: row.default_location_company ?? undefined,
     availability: row.availability ?? "stocked",
     receiptStatus: incoming > 0 ? "draft" : "posted",
