@@ -25,7 +25,7 @@ export function LoginForm() {
 
   return (
     <form action={submit} className="login-card">
-      <div className="login-brand"><span className="brand__mark"><span>⌂</span></span><span>BUILDER&apos;S <strong>HUB</strong></span></div>
+      <div className="login-brand"><span className="brand__mark"><span>BH</span></span><span>BUILDERS <strong>HUB</strong></span></div>
       <p className="eyebrow">Secure team access</p>
       <h1>Welcome back</h1>
       <p>Sign in to inventory, receiving, scanning and cashier tools.</p>

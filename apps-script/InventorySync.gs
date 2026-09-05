@@ -52,7 +52,7 @@ function setupInventorySync() {
   });
 
   syncAllFromSupabase();
-  spreadsheet.toast("Inventory synchronization is active.", "Builder's Hub", 8);
+  spreadsheet.toast("Inventory synchronization is active.", "Builders Hub", 8);
 }
 
 function handleInventoryEdit(event) {

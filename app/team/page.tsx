@@ -4,7 +4,7 @@ import { RequirePermission } from "@/components/require-permission";
 import { TeamManagement } from "@/components/team-management";
 
 export const metadata: Metadata = {
-  title: "Team | Builder's Hub",
+  title: "Team | Builders Hub",
   description: "Create employee logins and manage roles.",
 };
 

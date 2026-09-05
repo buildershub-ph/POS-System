@@ -8,7 +8,7 @@ create type public.variant_availability as enum ('stocked', 'display_only');
 alter table public.product_variants
   add column if not exists availability public.variant_availability not null default 'stocked';
 
--- Builder's Hub (the main store) also has a sister company that keeps stock of
+-- Builders Hub (the main store) also has a sister company that keeps stock of
 -- some of the same items at its own sites. Locations now record which company
 -- owns the stock sitting there, so reporting and transfers can tell them apart.
 alter table public.locations

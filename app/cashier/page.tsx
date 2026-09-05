@@ -3,7 +3,7 @@ import { CashierMode } from "@/components/cashier-mode";
 import { RequirePermission } from "@/components/require-permission";
 
 export const metadata: Metadata = {
-  title: "Cashier Mode | Builder's Hub",
+  title: "Cashier Mode | Builders Hub",
 };
 
 export default function CashierPage() {

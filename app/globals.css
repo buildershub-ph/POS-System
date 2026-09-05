@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  /* Builder's Hub brand: cobalt blue mark with a gold accent rule. */
+  /* Builders Hub brand: cobalt blue mark with a gold accent rule. */
   --brand-blue: #0b4ea2;
   --brand-blue-dark: #08356f;
   --brand-gold: #f2b705;

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LoginForm } from "@/components/login-form";
 
 export const metadata: Metadata = {
-  title: "Sign In | Builder's Hub",
+  title: "Sign In | Builders Hub",
 };
 
 export default function LoginPage() {

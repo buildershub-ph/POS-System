@@ -87,7 +87,7 @@ export function CashierMode() {
   return (
     <div className="cashier-page">
       <header className="cashier-header">
-        <div><Link className="brand" href="/"><span className="brand__mark"><span>BH</span></span><span className="brand__name">BUILDER&apos;S <strong>HUB</strong></span></Link><span className="cashier-mode-label">Cashier Mode</span></div>
+        <div><Link className="brand" href="/"><span className="brand__mark"><span>BH</span></span><span className="brand__name">BUILDERS <strong>HUB</strong></span></Link><span className="cashier-mode-label">Cashier Mode</span></div>
         <div><span className="cashier-user"><i>{initials(displayName)}</i><span><strong>{displayName}</strong><small>{user.role === "cashier" ? "Cashier" : user.role.replaceAll("_", " ")}</small></span></span><Link className="button button--secondary button--small" href="/">Exit Cashier</Link></div>
       </header>
 

@@ -18,7 +18,7 @@ export function Dashboard() {
   return (
     <div className="dashboard-grid">
       <section className="welcome-panel">
-        <div><p className="eyebrow">Builder&apos;s Hub inventory</p><h2>Welcome back, {displayName.split(" ")[0]}.</h2><p>Search the catalogue, scan a barcode, receive stock, or open Cashier Mode.</p><div className="welcome-actions"><Link className="button button--primary" href="/inventory">Browse Inventory</Link><Link className="button button--light" href="/scan">Scan a product</Link></div></div>
+        <div><p className="eyebrow">Builders Hub inventory</p><h2>Welcome back, {displayName.split(" ")[0]}.</h2><p>Search the catalogue, scan a barcode, receive stock, or open Cashier Mode.</p><div className="welcome-actions"><Link className="button button--primary" href="/inventory">Browse Inventory</Link><Link className="button button--light" href="/scan">Scan a product</Link></div></div>
         <div className="welcome-visual"><span>▤</span><i>✓</i></div>
       </section>
 

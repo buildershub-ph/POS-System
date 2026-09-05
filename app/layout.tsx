@@ -3,21 +3,21 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
-  title: "Builder's Hub Inventory",
+  title: "Builders Hub Inventory",
   description: "Secure inventory, receiving, barcode lookup and cashier preparation for a finishing materials store.",
-  applicationName: "Builder's Hub",
+  applicationName: "Builders Hub",
   manifest: "/manifest.webmanifest",
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg", apple: "/favicon.svg" },
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Builder's Hub" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Builders Hub" },
   openGraph: {
-    title: "Builder's Hub Inventory",
+    title: "Builders Hub Inventory",
     description: "Trusted inventory. Faster sales.",
     type: "website",
-    images: [{ url: "/og.png", width: 1732, height: 909, alt: "Builder's Hub inventory application" }],
+    images: [{ url: "/og.png", width: 1732, height: 909, alt: "Builders Hub inventory application" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Builder's Hub Inventory",
+    title: "Builders Hub Inventory",
     description: "Trusted inventory. Faster sales.",
     images: ["/og.png"],
   },

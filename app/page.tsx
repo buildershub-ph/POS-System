@@ -3,8 +3,8 @@ import { AppShell } from "@/components/app-shell";
 import { Dashboard } from "@/components/dashboard";
 
 export const metadata: Metadata = {
-  title: "Home | Builder's Hub Inventory",
-  description: "Role-based inventory workspace for Builder's Hub.",
+  title: "Home | Builders Hub Inventory",
+  description: "Role-based inventory workspace for Builders Hub.",
 };
 
 export default function HomePage() {

@@ -1,6 +1,6 @@
 {
-  "name": "Builder's Hub Inventory",
-  "short_name": "Builder's Hub",
+  "name": "Builders Hub Inventory",
+  "short_name": "Builders Hub",
   "description": "Secure mobile inventory and cashier preparation.",
   "start_url": "/",
   "display": "standalone",

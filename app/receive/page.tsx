@@ -4,7 +4,7 @@ import { ReceiveStock } from "@/components/receive-stock";
 import { RequirePermission } from "@/components/require-permission";
 
 export const metadata: Metadata = {
-  title: "Receive Stock | Builder's Hub",
+  title: "Receive Stock | Builders Hub",
 };
 
 export default function ReceivePage() {

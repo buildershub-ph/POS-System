@@ -1,4 +1,4 @@
-# Setting up Builder's Hub Inventory on a fresh Supabase project
+# Setting up Builders Hub Inventory on a fresh Supabase project
 
 This project is a Next.js app backed by Supabase (Postgres + Auth + Storage).
 Follow this once to get a live deployment fully working with real logins, the
@@ -26,7 +26,7 @@ What each migration does, briefly:
 | `0001` | Core schema: products, variants, locations, suppliers, inventory ledger, sales, roles, RLS policies. `variant_private_costs` is only ever readable by the `owner` role — this is how cost/profit stays hidden from everyone else. |
 | `0002`–`0007` | Auth wiring, Google-Sheets sync support, receiving workflow, supplier/photo fields. |
 | `0008` | Adds **display-only / order-by-request** items (`availability` column) and **multi-branch locations** — Canlalay Branch and Kosch Warehouse are added as Sister Company sites alongside the main store's Showroom/Warehouse/Display. |
-| `0009` | **Wipes the old demo/sample catalogue** and loads the real 54-item Builder's Hub catalogue (tiles, ceiling panels, fluted panels, doors, door jambs) with the actual costs, SRPs, and on-hand quantities from the inventory sheet, all at the Main Showroom. |
+| `0009` | **Wipes the old demo/sample catalogue** and loads the real 54-item Builders Hub catalogue (tiles, ceiling panels, fluted panels, doors, door jambs) with the actual costs, SRPs, and on-hand quantities from the inventory sheet, all at the Main Showroom. |
 
 ## 3. Create the owner's login
 
@@ -89,4 +89,4 @@ at your own pace; nothing else depends on photos being present.
 - **Multi-branch stock** — the Main Store (Showroom/Warehouse/Display),
   Canlalay Branch, and Kosch Warehouse are all selectable locations for
   receiving stock or adding new products, and each carries which company
-  (Builder's Hub vs. the sister company) it belongs to.
+  (Builders Hub vs. the sister company) it belongs to.

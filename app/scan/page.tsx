@@ -3,7 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { BarcodeScanner } from "@/components/barcode-scanner";
 
 export const metadata: Metadata = {
-  title: "Scan Product | Builder's Hub",
+  title: "Scan Product | Builders Hub",
 };
 
 export default function ScanPage() {

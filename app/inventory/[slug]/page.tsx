@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProductDetail } from "@/components/product-detail";
 
 export const metadata: Metadata = {
-  title: "Product Details | Builder's Hub",
+  title: "Product Details | Builders Hub",
 };
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {

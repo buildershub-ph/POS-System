@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { InventoryCatalogue } from "@/components/inventory-catalogue";
 
 export const metadata: Metadata = {
-  title: "Inventory | Builder's Hub",
+  title: "Inventory | Builders Hub",
   description: "Search product variants, prices and location availability.",
 };
 

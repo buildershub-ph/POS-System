@@ -1,6 +1,6 @@
 import type { ProductVariant } from "./types";
 
-// The real Builder's Hub retail catalogue, imported from the inventory sheet
+// The real Builders Hub retail catalogue, imported from the inventory sheet
 // shared by the owner (2026-08-18). Quantities are the physical opening balance
 // counted at the Main Showroom. Photographs are added later through the app.
 // This file is only used as an offline/demo fallback when Supabase is not

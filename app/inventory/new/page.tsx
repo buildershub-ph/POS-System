@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { RequirePermission } from "@/components/require-permission";
 
 export const metadata: Metadata = {
-  title: "Add Product | Builder's Hub",
+  title: "Add Product | Builders Hub",
   description: "Add a supplier-linked product, photograph, SKU and printable barcode.",
 };
 

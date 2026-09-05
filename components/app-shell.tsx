@@ -53,9 +53,9 @@ export function AppShell({
   return (
     <div className="app-frame">
       <aside className="sidebar">
-        <Link className="brand" href="/" aria-label="Builder's Hub home">
+        <Link className="brand" href="/" aria-label="Builders Hub home">
           <span className="brand__mark"><span>BH</span></span>
-          <span className="brand__name">BUILDER&apos;S <strong>HUB</strong></span>
+          <span className="brand__name">BUILDERS <strong>HUB</strong></span>
         </Link>
 
         {salesMode && (
