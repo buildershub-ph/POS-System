@@ -11,13 +11,14 @@ This inventory portal uses server-side routes, login, photo uploads, and Supabas
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEXT_PUBLIC_SITE_URL` (your Netlify site's URL, e.g. `https://your-site.netlify.app`)
 5. Deploy the project.
 
 Do not place the service-role key in this file, `netlify.toml`, or a public repository.
 
 ## Build settings
 
-- Build command: `npm run build:netlify`
+- Build command: `npm run build`
 - Publish directory: `.next`
 - Node.js version: `22.13.0`
 
