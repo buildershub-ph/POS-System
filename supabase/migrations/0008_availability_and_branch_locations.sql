@@ -21,6 +21,9 @@ insert into public.locations (id, code, name, address, company) values
   ('20000000-0000-0000-0000-000000000005', 'KOSCH-WH', 'Kosch Warehouse', 'Sister company warehouse', 'Sister Company')
 on conflict (id) do update set code = excluded.code, name = excluded.name, address = excluded.address, company = excluded.company, active = true;
 
+-- Column order below must exactly match the prior definition of this view up
+-- to "supplier_name" (Postgres cannot reorder or insert into the middle of an
+-- existing view's columns via CREATE OR REPLACE — only append at the end).
 create or replace view public.catalogue_variants
 with (security_invoker = true)
 as
@@ -40,15 +43,15 @@ select
   coalesce(sum(balance.available_quantity), 0)::numeric(14,3) as available_quantity,
   variant.default_location_id,
   location.name as default_location,
-  location.company as default_location_company,
-  variant.availability,
   coalesce(variant.photo_path, product.main_photo_path) as photo_path,
   variant.pieces_per_box,
   variant.sqm_per_box,
   variant.active,
   variant.supplier_sku,
   variant.supplier_id,
-  supplier.name as supplier_name
+  supplier.name as supplier_name,
+  location.company as default_location_company,
+  variant.availability
 from public.product_variants variant
 join public.products product on product.id = variant.product_id
 join public.categories category on category.id = product.category_id
@@ -58,6 +61,7 @@ left join public.suppliers supplier on supplier.id = variant.supplier_id
 where product.active = true
 group by variant.id, product.id, category.id, location.id, supplier.id;
 
+-- Same rule as above: existing columns keep their exact order, new ones go last.
 create or replace view public.portal_catalogue
 with (security_invoker = true)
 as
@@ -77,8 +81,6 @@ select
   catalogue.available_quantity,
   catalogue.default_location_id,
   catalogue.default_location,
-  catalogue.default_location_company,
-  catalogue.availability,
   catalogue.photo_path,
   catalogue.pieces_per_box,
   catalogue.sqm_per_box,
@@ -90,7 +92,9 @@ select
   incoming.draft_transaction_id,
   catalogue.supplier_sku,
   catalogue.supplier_id,
-  catalogue.supplier_name
+  catalogue.supplier_name,
+  catalogue.default_location_company,
+  catalogue.availability
 from public.catalogue_variants catalogue
 left join lateral (
   select
@@ -111,8 +115,8 @@ with (security_invoker = true)
 as
 select sku, barcode, product_name, category, brand, model, attributes, selling_unit,
        srp as selling_price, available_quantity, default_location as location,
-       default_location_company as location_company, availability,
-       supplier_sku, supplier_name
+       supplier_sku, supplier_name,
+       default_location_company as location_company, availability
 from public.catalogue_variants;
 
 create or replace function public.create_catalogue_product(p_product jsonb)
