@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatPeso } from "@/lib/mock-data";
 import type { ProductVariant } from "@/lib/types";
+import { useCurrentUser } from "@/lib/use-current-user";
 import { useInventory } from "@/lib/use-inventory";
 import { ProductArtwork } from "./product-artwork";
 import { StockBadge } from "./stock-badge";
@@ -14,16 +15,25 @@ type CartLine = {
   actualPrice: number;
 };
 
+function initials(name?: string) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
+
 export function CashierMode() {
+  const { user } = useCurrentUser();
   const { categories, products } = useInventory();
   const [query, setQuery] = useState("");
+  const [scanCode, setScanCode] = useState("");
+  const [scanMessage, setScanMessage] = useState("");
   const [category, setCategory] = useState("All");
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const [cart, setCart] = useState<CartLine[]>([]);
 
   const filteredProducts = useMemo(() => products.filter((product) => {
     const term = query.trim().toLowerCase();
-    const readyForSale = product.srp != null && product.available > 0;
+    const readyForSale = product.availability === "stocked" && product.srp != null && product.available > 0;
     return readyForSale && (category === "All" || product.category === category) && (!term || [product.productName, product.sku, product.barcode].join(" ").toLowerCase().includes(term));
   }), [category, products, query]);
 
@@ -34,6 +44,10 @@ export function CashierMode() {
   }, [cart]);
 
   function addProduct(product: ProductVariant) {
+    if (product.availability === "display_only") {
+      setScanMessage(`${product.productName} is a display-only item — it's available by order, not on hand to sell now.`);
+      return;
+    }
     const actualPrice = product.srp;
     if (actualPrice == null || product.available <= 0) return;
     setCart((current) => {
@@ -43,22 +57,56 @@ export function CashierMode() {
     });
   }
 
+  function lookupScan(code: string) {
+    const normalized = code.trim().toLowerCase();
+    if (!normalized) return;
+    const match = products.find((product) => product.barcode.toLowerCase() === normalized || product.sku.toLowerCase() === normalized || product.supplierSku?.toLowerCase() === normalized);
+    if (!match) {
+      setScanMessage(`No product found for "${code}".`);
+      return;
+    }
+    if (match.availability === "display_only") {
+      setScanMessage(`${match.productName} · display only — available by order, not in stock.`);
+      return;
+    }
+    if (match.available <= 0) {
+      setScanMessage(`${match.productName} is out of stock (0 available).`);
+      return;
+    }
+    setScanMessage(`${match.productName} · ${match.available} available.`);
+    addProduct(match);
+    setScanCode("");
+  }
+
   function updateLine(id: string, change: Partial<Pick<CartLine, "quantity" | "actualPrice">>) {
     setCart((current) => current.map((line) => line.product.id === id ? { ...line, ...change } : line));
   }
 
+  const displayName = user.fullName || user.email || "Cashier";
+
   return (
     <div className="cashier-page">
       <header className="cashier-header">
-        <div><Link className="brand" href="/"><span className="brand__mark"><span>⌂</span></span><span className="brand__name">BUILDER&apos;S <strong>HUB</strong></span></Link><span className="cashier-mode-label">Cashier Mode</span></div>
-        <div><span className="cashier-user"><i>AC</i><span><strong>Ana Cruz</strong><small>Cashier</small></span></span><Link className="button button--secondary button--small" href="/">Exit Cashier</Link></div>
+        <div><Link className="brand" href="/"><span className="brand__mark"><span>BH</span></span><span className="brand__name">BUILDER&apos;S <strong>HUB</strong></span></Link><span className="cashier-mode-label">Cashier Mode</span></div>
+        <div><span className="cashier-user"><i>{initials(displayName)}</i><span><strong>{displayName}</strong><small>{user.role === "cashier" ? "Cashier" : user.role.replaceAll("_", " ")}</small></span></span><Link className="button button--secondary button--small" href="/">Exit Cashier</Link></div>
       </header>
 
       <div className="cashier-tabs"><button className={mobileTab === "products" ? "is-active" : ""} onClick={() => setMobileTab("products")}>Products</button><button className={mobileTab === "cart" ? "is-active" : ""} onClick={() => setMobileTab("cart")}>Current Sale <span>{cart.length}</span></button></div>
 
       <main className="cashier-workspace">
         <section className={`cashier-products ${mobileTab !== "products" ? "cashier-mobile-hidden" : ""}`}>
-          <label className="search-field search-field--large"><span>⌗</span><input aria-label="Scan barcode or enter SKU" placeholder="Scan barcode or enter SKU" /></label>
+          <form onSubmit={(event) => { event.preventDefault(); lookupScan(scanCode); }}>
+            <label className="search-field search-field--large">
+              <span>⌗</span>
+              <input
+                aria-label="Scan barcode or enter SKU"
+                onChange={(event) => setScanCode(event.target.value)}
+                placeholder="Scan barcode or enter SKU to check stock or add to sale"
+                value={scanCode}
+              />
+            </label>
+          </form>
+          {scanMessage && <p className="scan-inline-message">{scanMessage}</p>}
           <label className="search-field"><span>⌕</span><input onChange={(event) => setQuery(event.target.value)} placeholder="Search products by name, SKU or barcode" value={query} /></label>
           <div className="chip-row chip-row--compact">{categories.map((item) => <button className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div>
           <div className="cashier-section-title"><h2>Products</h2><select aria-label="Sort products"><option>Relevance</option><option>Recently sold</option><option>Favourites</option></select></div>
@@ -72,7 +120,7 @@ export function CashierMode() {
         </section>
 
         <section className={`cashier-cart ${mobileTab !== "cart" ? "cashier-mobile-hidden" : ""}`}>
-          <div className="sale-heading"><div><p className="eyebrow">Current transaction</p><h2>Sale #S-2026-000123</h2></div><div><select aria-label="Customer"><option>Walk-in Customer</option><option>Contractor Account</option></select><button className="button button--secondary button--small">Add Customer</button></div></div>
+          <div className="sale-heading"><div><p className="eyebrow">Current transaction</p><h2>New sale</h2></div><div><select aria-label="Customer"><option>Walk-in Customer</option><option>Contractor Account</option></select><button className="button button--secondary button--small">Add Customer</button></div></div>
           <div className="cart-table"><div className="cart-table__header"><span>Item</span><span>Qty</span><span>SRP</span><span>Actual price</span><span>Total</span></div>{cart.map((line, index) => (
             <div className="cart-line" key={line.product.id}>
               <span className="cart-index">{index + 1}</span><ProductArtwork alt={line.product.photoAlt} kind={line.product.photo} />

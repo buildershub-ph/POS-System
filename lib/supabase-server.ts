@@ -7,6 +7,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export type AuthenticatedUser = {
   id: string;
   email?: string;
+  fullName?: string;
   role?: "owner" | "manager" | "sales_employee" | "stock_employee" | "cashier";
 };
 
@@ -56,10 +57,10 @@ export async function supabaseAdminRest(path: string, init: RequestInit = {}) {
 export async function authenticateRequest(request: NextRequest) {
   const email = sitesEmail(request);
   if (email && supabaseServiceKey) {
-    const response = await supabaseAdminRest(`profiles?select=id,email,role,active&email=eq.${encodeURIComponent(email)}&active=eq.true&limit=1`);
+    const response = await supabaseAdminRest(`profiles?select=id,email,full_name,role,active&email=eq.${encodeURIComponent(email)}&active=eq.true&limit=1`);
     if (!response.ok) return null;
-    const [profile] = (await response.json()) as Array<AuthenticatedUser & { active: boolean }>;
-    return profile ? { id: profile.id, email: profile.email, role: profile.role } : null;
+    const [profile] = (await response.json()) as Array<AuthenticatedUser & { full_name?: string; active: boolean }>;
+    return profile ? { id: profile.id, email: profile.email, fullName: profile.full_name, role: profile.role } : null;
   }
 
   const token = bearerToken(request);
@@ -74,13 +75,23 @@ export async function authenticateRequest(request: NextRequest) {
   });
   if (!response.ok) return null;
   const authUser = (await response.json()) as AuthenticatedUser;
-  const profileResponse = await fetch(`${config.supabaseUrl}/rest/v1/profiles?select=id,email,role,active&id=eq.${authUser.id}&active=eq.true&limit=1`, {
+  const profileResponse = await fetch(`${config.supabaseUrl}/rest/v1/profiles?select=id,email,full_name,role,active&id=eq.${authUser.id}&active=eq.true&limit=1`, {
     headers: { apikey: config.supabaseAnonKey, authorization: `Bearer ${token}` },
     cache: "no-store",
   });
   if (!profileResponse.ok) return null;
-  const [profile] = (await profileResponse.json()) as Array<AuthenticatedUser & { active: boolean }>;
-  return profile ? { id: profile.id, email: profile.email, role: profile.role } : null;
+  const [profile] = (await profileResponse.json()) as Array<AuthenticatedUser & { full_name?: string; active: boolean }>;
+  return profile ? { id: profile.id, email: profile.email, fullName: profile.full_name, role: profile.role } : null;
+}
+
+/** Calls Supabase's Admin Auth API (service role only) to manage login accounts. */
+export async function supabaseAdminAuth(path: string, init: RequestInit = {}) {
+  const config = configuration();
+  return fetch(`${config.supabaseUrl}/auth/v1/admin/${path}`, {
+    ...init,
+    headers: { ...serviceHeaders(), ...(init.headers ?? {}) },
+    cache: "no-store",
+  });
 }
 
 export async function supabaseStorage(

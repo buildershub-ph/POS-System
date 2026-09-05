@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { products } from "@/lib/mock-data";
 import { authenticateRequest, isSupabaseConfigured, supabaseRest } from "@/lib/supabase-server";
-import type { ProductVariant, SellingUnit } from "@/lib/types";
+import type { ProductVariant, SellingUnit, VariantAvailability } from "@/lib/types";
 
 type CatalogueRow = {
   id: string;
@@ -22,6 +22,8 @@ type CatalogueRow = {
   available_quantity: number | string;
   incoming_quantity: number | string;
   default_location: string | null;
+  default_location_company: string | null;
+  availability: VariantAvailability;
   photo_path: string | null;
   pieces_per_box: number | string | null;
   sqm_per_box: number | string | null;
@@ -44,7 +46,10 @@ function toPortalProduct(row: CatalogueRow): ProductVariant {
   const attributes = row.attributes ?? {};
   const incoming = number(row.incoming_quantity);
   const srp = number(row.srp);
-  const artwork = row.category === "Tiles" ? "tile" : row.category === "Panels" || row.category === "Accessories" ? "panel" : "generic";
+  const artwork = row.category === "Tiles" ? "tile"
+    : row.category === "Panels" || row.category === "Ceiling Panel" || row.category === "Fluted Panel" || row.category === "Accessories" ? "panel"
+    : row.category === "Doors" ? "door"
+    : "generic";
   return {
     id: row.id,
     productSlug: slug(row.sku),
@@ -66,6 +71,8 @@ function toPortalProduct(row: CatalogueRow): ProductVariant {
     incoming,
     reorderLevel: number(row.reorder_level),
     location: row.default_location ?? "Location pending",
+    locationCompany: row.default_location_company ?? undefined,
+    availability: row.availability ?? "stocked",
     receiptStatus: incoming > 0 ? "draft" : "posted",
     sourceInvoice: row.source_invoice ?? (String(attributes["Source invoice"] ?? "") || undefined),
     deliveryReference: row.delivery_reference ?? undefined,

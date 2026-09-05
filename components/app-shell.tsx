@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { can } from "@/lib/permissions";
-import type { UserRole } from "@/lib/types";
+import { useCurrentUser } from "@/lib/use-current-user";
 
 type AppShellProps = {
   children: ReactNode;
   title: string;
   eyebrow?: string;
-  role?: UserRole;
   headerAction?: ReactNode;
   wide?: boolean;
 };
@@ -24,22 +23,38 @@ const navItems = [
   { href: "/inventory?view=transactions", label: "Transactions", icon: "⇄" },
 ];
 
+function initials(name?: string) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
+
 export function AppShell({
   children,
   title,
   eyebrow,
-  role = "cashier",
   headerAction,
   wide = false,
 }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useCurrentUser();
+  const role = user.role;
   const salesMode = can(role, "processSale");
+  const manageTeam = can(role, "manageUsers");
+  const displayName = user.fullName || user.email || "Team member";
+  const items = manageTeam ? [...navItems, { href: "/team", label: "Team", icon: "☺" }] : navItems;
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   return (
     <div className="app-frame">
       <aside className="sidebar">
         <Link className="brand" href="/" aria-label="Builder's Hub home">
-          <span className="brand__mark"><span>⌂</span></span>
+          <span className="brand__mark"><span>BH</span></span>
           <span className="brand__name">BUILDER&apos;S <strong>HUB</strong></span>
         </Link>
 
@@ -50,7 +65,7 @@ export function AppShell({
         )}
 
         <nav className="sidebar-nav" aria-label="Main navigation">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.split("?")[0]);
             return (
               <Link className={active ? "is-active" : ""} href={item.href} key={item.label}>
@@ -62,11 +77,11 @@ export function AppShell({
         </nav>
 
         <div className="sidebar-spacer" />
-        <div className="profile-card">
-          <span className="avatar">AC</span>
-          <span><strong>Ana Cruz</strong><small>{role === "cashier" ? "Cashier" : "Team member"}</small></span>
-          <span aria-hidden="true">›</span>
-        </div>
+        <button className="profile-card" onClick={logout} type="button" title="Sign out">
+          <span className="avatar">{initials(displayName)}</span>
+          <span><strong>{displayName}</strong><small>{role === "cashier" ? "Cashier" : role.replaceAll("_", " ")}</small></span>
+          <span aria-hidden="true">⏻</span>
+        </button>
       </aside>
 
       <main className={`app-main ${wide ? "app-main--wide" : ""}`}>
@@ -79,10 +94,10 @@ export function AppShell({
             {headerAction}
             {salesMode && pathname !== "/cashier" && (
               <Link className="icon-button cart-button" href="/cashier" aria-label="Open current sale">
-                <span>▤</span><span className="cart-button__count">2</span>
+                <span>▤</span>
               </Link>
             )}
-            <button className="avatar avatar--button" aria-label="Open profile menu">AC</button>
+            <button className="avatar avatar--button" aria-label="Open profile menu" onClick={logout} title="Sign out">{initials(displayName)}</button>
           </div>
         </header>
         <div className="page-content">{children}</div>
@@ -95,9 +110,8 @@ export function AppShell({
           <span>{salesMode ? "▤" : "⌗"}</span><small>{salesMode ? "Cashier" : "Scan"}</small>
         </Link>
         <Link className={pathname.startsWith("/receive") ? "is-active" : ""} href="/receive"><span>↧</span><small>Activity</small></Link>
-        <button type="button"><span>☰</span><small>More</small></button>
+        <button onClick={logout} type="button"><span>⏻</span><small>Sign out</small></button>
       </nav>
     </div>
   );
 }
-

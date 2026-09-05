@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://builders-hub-inventory.chatgpt.site"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "Builder's Hub Inventory",
   description: "Secure inventory, receiving, barcode lookup and cashier preparation for a finishing materials store.",
   applicationName: "Builder's Hub",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffc400",
+  themeColor: "#0b4ea2",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

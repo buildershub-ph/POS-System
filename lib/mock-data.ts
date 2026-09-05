@@ -1,11 +1,12 @@
-import { initialOrderProducts } from "./initial-order-data";
+import { buildersHubCatalogue } from "./builders-hub-catalogue";
 import type { ProductVariant } from "./types";
 
-export const categories = ["All", "Tiles", "Panels", "Accessories"];
+export const categories = ["All", "Tiles", "Ceiling Panel", "Fluted Panel", "Doors", "Door Jamb"];
 
-export const products: ProductVariant[] = initialOrderProducts;
+export const products: ProductVariant[] = buildersHubCatalogue;
 
 export function stockStatus(product: ProductVariant) {
+  if (product.availability === "display_only") return "display_only" as const;
   if (product.available <= 0) return "out_of_stock" as const;
   if (product.available <= product.reorderLevel) return "low_stock" as const;
   return "in_stock" as const;

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { generateInternalBarcode } from "@/lib/code128";
 import { useCatalogueSetup } from "@/lib/use-catalogue-setup";
-import type { SellingUnit } from "@/lib/types";
+import type { SellingUnit, VariantAvailability } from "@/lib/types";
 import { BarcodeLabel } from "./barcode-label";
 import { SupplierSelect } from "./supplier-select";
 
@@ -28,6 +28,7 @@ export function AddProductWizard() {
   const [srp, setSrp] = useState("");
   const [reorderLevel, setReorderLevel] = useState("0");
   const [locationId, setLocationId] = useState("");
+  const [availability, setAvailability] = useState<VariantAvailability>("stocked");
   const [piecesPerBox, setPiecesPerBox] = useState("");
   const [sqmPerBox, setSqmPerBox] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -65,7 +66,7 @@ export function AddProductWizard() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           categoryId, supplierId, supplierSku, sku, barcode, name, brand, model, description,
-          mainPhotoPath: photoResult.data.path, sellingUnit, srp, reorderLevel, locationId,
+          mainPhotoPath: photoResult.data.path, sellingUnit, srp, reorderLevel, locationId, availability,
           piecesPerBox: sellingUnit === "box" ? piecesPerBox : "",
           sqmPerBox: sellingUnit === "box" ? sqmPerBox : "",
           attributes: Object.fromEntries(Object.entries({ Size: size, Color: color, Finish: finish }).filter(([, value]) => value)),
@@ -119,7 +120,8 @@ export function AddProductWizard() {
       <section className="wizard-section"><div className="wizard-section__number">5</div><div><h2>Pricing and stock setup</h2><p>Set the SRP and default storage location. Stock remains zero until receiving is confirmed.</p></div><div className="form-grid wizard-section__fields">
         <label className="field"><span>SRP</span><input min="0" step="0.01" type="number" value={srp} onChange={(event) => setSrp(event.target.value)} placeholder="0.00" /></label>
         <label className="field"><span>Reorder level</span><input min="0" step="0.001" type="number" value={reorderLevel} onChange={(event) => setReorderLevel(event.target.value)} /></label>
-        <label className="field field--wide"><span>Default location *</span><select required value={locationId} onChange={(event) => setLocationId(event.target.value)}><option value="">Select location</option>{setup.locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label className="field field--wide"><span>Default location / branch *</span><select required value={locationId} onChange={(event) => setLocationId(event.target.value)}><option value="">Select location</option>{setup.locations.map((item) => <option key={item.id} value={item.id}>{item.name}{item.company && item.company !== "Builders Hub" ? ` (${item.company})` : ""}</option>)}</select></label>
+        <label className="field field--wide"><span>Availability *</span><select value={availability} onChange={(event) => setAvailability(event.target.value as VariantAvailability)}><option value="stocked">Stocked — kept and sold on hand</option><option value="display_only">Display only — shown in the showroom, available by order only</option></select></label>
       </div></section>
 
       {(error || setupError) && <div className="error-banner">{error || setupError}</div>}

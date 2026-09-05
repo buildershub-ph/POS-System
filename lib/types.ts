@@ -5,7 +5,12 @@ export type UserRole =
   | "stock_employee"
   | "cashier";
 
-export type StockStatus = "in_stock" | "low_stock" | "out_of_stock";
+export type StockStatus = "in_stock" | "low_stock" | "out_of_stock" | "display_only";
+
+// "stocked" items are physically on hand. "display_only" items are shown in the
+// showroom or catalogue for customers to see, but are not kept in stock — staff
+// tell the customer it is available by order only.
+export type VariantAvailability = "stocked" | "display_only";
 
 export type SellingUnit =
   | "piece"
@@ -36,6 +41,8 @@ export type ProductVariant = {
   incoming?: number;
   reorderLevel: number;
   location: string;
+  locationCompany?: string;
+  availability: VariantAvailability;
   receiptStatus?: "draft" | "verified" | "posted";
   sourceInvoice?: string;
   deliveryReference?: string;
@@ -55,7 +62,7 @@ export type Supplier = {
 
 export type CatalogueSetup = {
   categories: Array<{ id: string; code: string; name: string }>;
-  locations: Array<{ id: string; code: string; name: string }>;
+  locations: Array<{ id: string; code: string; name: string; company?: string }>;
   suppliers: Supplier[];
 };
 
@@ -69,6 +76,27 @@ export type InventoryTransactionType =
   | "display_stock"
   | "physical_count_adjustment"
   | "reversal";
+
+// Owner-only pricing data. This is fetched separately from the main catalogue
+// so a private cost or margin can never accidentally end up in a response that
+// a non-owner role can read.
+export type VariantMargin = {
+  variantId: string;
+  sku: string;
+  srp: number;
+  unitCost: number;
+  landedCost: number;
+  minimumSellingPrice: number;
+  grossMarginAmount: number;
+};
+
+export type TeamMember = {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  active: boolean;
+};
 
 export type InventoryLineInput = {
   variantId: string;

@@ -11,6 +11,13 @@ export function StockBadge({ product, compact = false }: { product: ProductVaria
     );
   }
   const status = stockStatus(product);
+  if (status === "display_only") {
+    return (
+      <span className={`stock-badge stock-badge--display-only ${compact ? "stock-badge--compact" : ""}`}>
+        <i /> Display only{!compact && " · available by order"}
+      </span>
+    );
+  }
   const label = status === "out_of_stock" ? "Out of stock" : status === "low_stock" ? "Low stock" : "Available";
   return (
     <span className={`stock-badge stock-badge--${status} ${compact ? "stock-badge--compact" : ""}`}>

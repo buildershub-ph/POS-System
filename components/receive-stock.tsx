@@ -92,7 +92,7 @@ export function ReceiveStock() {
           <label className="field field--wide"><span>Scan barcode or search product</span><div className="field-combo"><input defaultValue={selected.sku} aria-label="Barcode or SKU" /><a href="/scan">⌗</a></div></label>
           <label className="field"><span>Supplier *</span><SupplierSelect suppliers={setup.suppliers} value={effectiveSupplierId} onChange={setSupplierId} onAdd={addSupplier} required /></label>
           <label className="field"><span>Delivery reference *</span><input key={selected.deliveryReference} defaultValue={selected.deliveryReference} /></label>
-          <label className="field"><span>Destination location *</span><select value={destinationLocationId} onChange={(event) => setDestinationLocationId(event.target.value)}><option value="20000000-0000-0000-0000-000000000002">Warehouse</option><option value="20000000-0000-0000-0000-000000000001">Main Showroom</option><option value="20000000-0000-0000-0000-000000000003">Display Area</option></select></label>
+          <label className="field"><span>Destination location / branch *</span><select value={destinationLocationId} onChange={(event) => setDestinationLocationId(event.target.value)}>{setup.locations.map((location) => <option key={location.id} value={location.id}>{location.name}{location.company && location.company !== "Builders Hub" ? ` (${location.company})` : ""}</option>)}</select></label>
           <label className="field"><span>Delivery date</span><input type="date" defaultValue={selected.deliveryDate} /></label>
         </div>
 

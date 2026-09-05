@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   const [categoriesResponse, locationsResponse, suppliersResponse] = await Promise.all([
     supabaseRest(request, "categories?select=id,code,name&active=eq.true&order=name.asc"),
-    supabaseRest(request, "locations?select=id,code,name&active=eq.true&order=name.asc"),
+    supabaseRest(request, "locations?select=id,code,name,company&active=eq.true&order=name.asc"),
     supabaseRest(request, "suppliers?select=id,code,name&active=eq.true&order=name.asc"),
   ]);
   if (![categoriesResponse, locationsResponse, suppliersResponse].every((response) => response.ok)) {
