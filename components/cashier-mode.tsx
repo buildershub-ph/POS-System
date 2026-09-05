@@ -26,6 +26,10 @@ const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
   { value: "split", label: "Split payment" },
 ];
 
+function isPreorder(product: ProductVariant) {
+  return product.availability === "display_only" || product.available <= 0;
+}
+
 function initials(name?: string) {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/);
@@ -50,11 +54,14 @@ export function CashierMode() {
   const [saleError, setSaleError] = useState("");
   const [saleMessage, setSaleMessage] = useState("");
 
-  const filteredProducts = useMemo(() => products.filter((product) => {
+  const filteredProducts = useMemo(() => {
     const term = query.trim().toLowerCase();
-    const readyForSale = product.availability === "stocked" && product.srp != null && product.available > 0;
-    return readyForSale && (category === "All" || product.category === category) && (!term || [product.productName, product.sku, product.barcode].join(" ").toLowerCase().includes(term));
-  }), [category, products, query]);
+    return products
+      .filter((product) => product.srp != null
+        && (category === "All" || product.category === category)
+        && (!term || [product.productName, product.sku, product.barcode].join(" ").toLowerCase().includes(term)))
+      .sort((a, b) => Number(isPreorder(a)) - Number(isPreorder(b)));
+  }, [category, products, query]);
 
   const totals = useMemo(() => {
     const srp = cart.reduce((sum, line) => sum + (line.product.srp ?? 0) * line.quantity, 0);
@@ -65,12 +72,11 @@ export function CashierMode() {
   const hasDiscount = cart.some((line) => line.actualPrice < (line.product.srp ?? 0));
 
   function addProduct(product: ProductVariant) {
-    if (product.availability === "display_only") {
-      setScanMessage(`${product.productName} is a display-only item — it's available by order, not on hand to sell now.`);
-      return;
-    }
     const actualPrice = product.srp;
-    if (actualPrice == null || product.available <= 0) return;
+    if (actualPrice == null) return;
+    if (isPreorder(product)) {
+      setScanMessage(`${product.productName} added as a pre-order — ${product.availability === "display_only" ? "it's a display item" : "currently 0 in stock"}. You'll need to order it from the supplier.`);
+    }
     setCart((current) => {
       const existing = current.find((line) => line.product.id === product.id);
       if (existing) return current.map((line) => line.product.id === product.id ? { ...line, quantity: line.quantity + 1 } : line);
@@ -86,15 +92,7 @@ export function CashierMode() {
       setScanMessage(`No product found for "${code}".`);
       return;
     }
-    if (match.availability === "display_only") {
-      setScanMessage(`${match.productName} · display only — available by order, not in stock.`);
-      return;
-    }
-    if (match.available <= 0) {
-      setScanMessage(`${match.productName} is out of stock (0 available).`);
-      return;
-    }
-    setScanMessage(`${match.productName} · ${match.available} available.`);
+    if (!isPreorder(match)) setScanMessage(`${match.productName} · ${match.available} available.`);
     addProduct(match);
     setScanCode("");
   }
@@ -181,7 +179,7 @@ export function CashierMode() {
           <div className="cashier-product-grid">{filteredProducts.map((product) => (
             <button className="cashier-product-card" key={product.id} onClick={() => addProduct(product)}>
               <ProductArtwork alt={product.photoAlt} kind={product.photo} />
-              <span><strong>{product.productName}</strong><small>{product.color ?? product.model} · {product.size ?? product.model}</small><small>SKU: {product.sku}</small><b>{formatPeso(product.srp)} <i>/ {product.sellingUnit.replaceAll("_", " ")}</i></b><StockBadge compact product={product} /></span>
+              <span><strong>{product.productName}</strong><small>{product.color ?? product.model} · {product.size ?? product.model}</small><small>SKU: {product.sku}</small><b>{formatPeso(product.srp)} <i>/ {product.sellingUnit.replaceAll("_", " ")}</i></b>{isPreorder(product) ? <span className="preorder-badge">Pre-order</span> : <StockBadge compact product={product} />}</span>
             </button>
           ))}</div>
           {!filteredProducts.length && <div className="empty-state"><span>↧</span><h3>No products are ready for sale yet</h3><p>Confirm receiving and add SRPs before using Cashier Mode.</p></div>}
@@ -192,8 +190,8 @@ export function CashierMode() {
           <div className="cart-table"><div className="cart-table__header"><span>Item</span><span>Qty</span><span>SRP</span><span>Actual price</span><span>Total</span></div>{cart.map((line, index) => (
             <div className="cart-line" key={line.product.id}>
               <span className="cart-index">{index + 1}</span><ProductArtwork alt={line.product.photoAlt} kind={line.product.photo} />
-              <div className="cart-line__name"><strong>{line.product.productName}</strong><small>{line.product.color ?? line.product.model} · {line.product.size ?? line.product.model}</small><small>SKU: {line.product.sku}</small></div>
-              <label><span className="mobile-only">Quantity</span><input max={line.product.available} min="1" onChange={(event) => updateLine(line.product.id, { quantity: Math.min(Number(event.target.value) || 1, line.product.available) })} type="number" value={line.quantity} /><small>{line.product.sellingUnit.replaceAll("_", " ")}</small></label>
+              <div className="cart-line__name"><strong>{line.product.productName}</strong><small>{line.product.color ?? line.product.model} · {line.product.size ?? line.product.model}</small><small>SKU: {line.product.sku}</small>{(isPreorder(line.product) || line.quantity > line.product.available) && <small className="preorder-note">Pre-order — order from supplier</small>}</div>
+              <label><span className="mobile-only">Quantity</span><input min="1" onChange={(event) => updateLine(line.product.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} type="number" value={line.quantity} /><small>{line.product.sellingUnit.replaceAll("_", " ")}</small></label>
               <span className="cart-line__srp">{formatPeso(line.product.srp)}</span>
               <label><span className="mobile-only">Actual price</span><input aria-label={`Actual selling price for ${line.product.productName}`} min="0" onChange={(event) => updateLine(line.product.id, { actualPrice: Math.max(0, Number(event.target.value)) })} type="number" value={line.actualPrice} />{line.actualPrice < (line.product.srp ?? 0) && <small className="approval-note">{user.role === "owner" || user.role === "manager" ? "Discount auto-approved" : "Needs owner/manager approval"}</small>}</label>
               <strong className="cart-line__total">{formatPeso(line.actualPrice * line.quantity)}</strong>
