@@ -1,0 +1,78 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { formatPeso } from "@/lib/mock-data";
+import { useInventory } from "@/lib/use-inventory";
+import { ProductArtwork } from "./product-artwork";
+import { StockBadge } from "./stock-badge";
+
+export function InventoryCatalogue() {
+  const { categories, loading, products } = useInventory();
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All");
+  const [availableOnly, setAvailableOnly] = useState(false);
+
+  const filteredProducts = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return products.filter((product) => {
+      const matchesCategory = category === "All" || product.category === category;
+      const matchesAvailability = !availableOnly || product.available > 0;
+      const matchesQuery = !normalized || [product.productName, product.sku, product.supplierSku, product.barcode, product.brand, product.model]
+        .join(" ").toLowerCase().includes(normalized);
+      return matchesCategory && matchesAvailability && matchesQuery;
+    });
+  }, [availableOnly, category, products, query]);
+
+  return (
+    <section>
+      <div className="catalogue-tools">
+        <label className="search-field search-field--large">
+          <span>⌕</span>
+          <input
+            aria-label="Search products"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search product, our SKU, supplier SKU or barcode"
+            value={query}
+          />
+          <Link href="/scan" aria-label="Scan a barcode">⌗</Link>
+        </label>
+        <button className={`filter-button ${availableOnly ? "is-active" : ""}`} onClick={() => setAvailableOnly((value) => !value)} type="button">
+          <span>≡</span> Available only
+        </button>
+      </div>
+
+      <div className="chip-row" aria-label="Product categories">
+        {categories.map((item) => (
+          <button className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)} type="button">{item}</button>
+        ))}
+      </div>
+
+      <div className="catalogue-heading">
+        <div><h2>Products</h2><p>{loading ? "Refreshing live inventory…" : `${filteredProducts.length} variants found`}</p></div>
+        <select aria-label="Sort inventory"><option>Sort: Relevance</option><option>Stock: Low to high</option><option>Price: Low to high</option></select>
+      </div>
+
+      <div className="product-grid">
+        {filteredProducts.map((product) => (
+          <Link className="product-card" href={`/inventory/${product.productSlug}?variant=${product.id}`} key={product.id}>
+            <ProductArtwork alt={product.photoAlt} kind={product.photo} />
+            <div className="product-card__body">
+              <span className="product-card__category">{product.category}</span>
+              <h3>{product.productName}</h3>
+              <p>{product.color ?? product.model} · {product.size ?? product.model}</p>
+              <small>SKU: {product.sku}</small>
+              {product.supplierSku && <small>Supplier SKU: {product.supplierSku}</small>}
+              <div className={`product-card__price ${product.srp == null ? "product-card__price--pending" : ""}`}>{formatPeso(product.srp)} {product.srp != null && <small>/ {product.sellingUnit.replaceAll("_", " ")}</small>}</div>
+              <StockBadge compact product={product} />
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {!filteredProducts.length && (
+        <div className="empty-state"><span>⌕</span><h3>No matching products</h3><p>Try another own SKU, supplier SKU, barcode, brand or category.</p></div>
+      )}
+    </section>
+  );
+}

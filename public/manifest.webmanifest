@@ -1,0 +1,13 @@
+{
+  "name": "Builder's Hub Inventory",
+  "short_name": "Builder's Hub",
+  "description": "Secure mobile inventory and cashier preparation.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f8",
+  "theme_color": "#ffc400",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
+
