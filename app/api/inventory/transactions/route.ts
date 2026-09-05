@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     };
     const transaction = validateInventoryTransaction(body);
     if (["receiving", "transfer", "supplier_return", "damaged", "display_stock", "physical_count_adjustment"].includes(transaction.type)
-      && !["owner", "manager", "stock_employee"].includes(user.role ?? "")) {
+      && !["owner", "manager"].includes(user.role ?? "")) {
       return NextResponse.json({ error: "Your role cannot post this stock transaction." }, { status: 403 });
     }
     const response = await supabaseRest(request, "rpc/post_sites_inventory_transaction", {

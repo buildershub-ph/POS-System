@@ -22,9 +22,9 @@ export type Permission =
 
 const permissions: Record<Permission, UserRole[]> = {
   viewCatalogue: ["owner", "manager", "sales_employee", "stock_employee", "cashier"],
-  receiveStock: ["owner", "manager", "stock_employee"],
-  transferStock: ["owner", "manager", "stock_employee"],
-  countStock: ["owner", "manager", "stock_employee"],
+  receiveStock: ["owner", "manager"],
+  transferStock: ["owner", "manager"],
+  countStock: ["owner", "manager"],
   processSale: ["owner", "manager", "sales_employee", "cashier"],
   approvePriceOverride: ["owner", "manager"],
   manageProducts: ["owner", "manager"],

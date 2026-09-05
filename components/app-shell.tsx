@@ -17,7 +17,7 @@ type AppShellProps = {
 const navItems = [
   { href: "/", label: "Home", icon: "⌂" },
   { href: "/inventory", label: "Inventory", icon: "▣" },
-  { href: "/receive", label: "Receive Stock", icon: "↧" },
+  { href: "/receive", label: "Receive Stock", icon: "↧", permission: "receiveStock" as const },
   { href: "/inventory?view=low-stock", label: "Low Stock", icon: "!" },
   { href: "/scan", label: "Scan Product", icon: "⌗" },
   { href: "/inventory?view=transactions", label: "Transactions", icon: "⇄" },
@@ -43,7 +43,8 @@ export function AppShell({
   const salesMode = can(role, "processSale");
   const manageTeam = can(role, "manageUsers");
   const displayName = user.fullName || user.email || "Team member";
-  const items = manageTeam ? [...navItems, { href: "/team", label: "Team", icon: "☺" }] : navItems;
+  const visibleNavItems = navItems.filter((item) => !item.permission || can(role, item.permission));
+  const items = manageTeam ? [...visibleNavItems, { href: "/team", label: "Team", icon: "☺" }] : visibleNavItems;
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -109,7 +110,7 @@ export function AppShell({
         <Link className="mobile-nav__centre" href={salesMode ? "/cashier" : "/scan"}>
           <span>{salesMode ? "▤" : "⌗"}</span><small>{salesMode ? "Cashier" : "Scan"}</small>
         </Link>
-        <Link className={pathname.startsWith("/receive") ? "is-active" : ""} href="/receive"><span>↧</span><small>Activity</small></Link>
+        <Link className={pathname.startsWith("/receive") || pathname.includes("transactions") ? "is-active" : ""} href={can(role, "receiveStock") ? "/receive" : "/inventory?view=transactions"}><span>↧</span><small>Activity</small></Link>
         <button onClick={logout} type="button"><span>⏻</span><small>Sign out</small></button>
       </nav>
     </div>
