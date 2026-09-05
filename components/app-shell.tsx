@@ -21,6 +21,7 @@ const navItems = [
   { href: "/inventory?view=low-stock", label: "Low Stock", icon: "!" },
   { href: "/scan", label: "Scan Product", icon: "⌗" },
   { href: "/transactions", label: "Transactions", icon: "⇄" },
+  { href: "/customers", label: "Customers", icon: "☺" },
 ];
 
 function initials(name?: string) {

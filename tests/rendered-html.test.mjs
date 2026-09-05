@@ -44,7 +44,7 @@ test("server-renders the inventory dashboard", async () => {
 });
 
 test("core workflow routes render", async () => {
-  for (const path of ["/inventory", "/receive", "/scan", "/cashier", "/login", "/transactions"]) {
+  for (const path of ["/inventory", "/receive", "/scan", "/cashier", "/login", "/transactions", "/customers", "/inventory/labels"]) {
     const response = await fetch(`${BASE_URL}${path}`);
     assert.equal(response.status, 200, `${path} should render`);
     assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);

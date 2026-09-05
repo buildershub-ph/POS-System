@@ -20,6 +20,7 @@ const historyActionLabels: Record<SaleHistoryAction, string> = {
   created_completed: "Sale completed",
   completed: "Reservation completed — stock deducted",
   cancelled: "Sale cancelled",
+  payment_recorded: "Payment recorded",
 };
 
 function formatDate(value: string) {
@@ -63,6 +64,11 @@ export function Transactions() {
   const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
   const [exportFrom, setExportFrom] = useState(startOfMonth());
   const [exportTo, setExportTo] = useState(today());
+  const [statusFilter, setStatusFilter] = useState<"all" | SaleRecord["status"]>("all");
+  const [pendingPaymentOnly, setPendingPaymentOnly] = useState(false);
+  const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
+  const [recordPaymentMethod, setRecordPaymentMethod] = useState<PaymentMethod>("cash");
+  const [recordPaymentDate, setRecordPaymentDate] = useState(today());
   const canCancel = can(user.role, "transferStock");
   const canProcessSale = can(user.role, "processSale");
 
@@ -119,6 +125,31 @@ export function Transactions() {
     }
   }
 
+  async function recordPayment(sale: SaleRecord) {
+    setPayingId(sale.id);
+    setError("");
+    try {
+      const response = await fetch(`/api/sales/${sale.id}/mark-paid`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ paidAt: `${recordPaymentDate}T00:00:00`, paymentMethod: recordPaymentMethod }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Payment could not be recorded.");
+      setRecordingPaymentId(null);
+      load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Payment could not be recorded.");
+    } finally {
+      setPayingId(null);
+    }
+  }
+
+  const filteredSales = useMemo(
+    () => sales.filter((sale) => (statusFilter === "all" || sale.status === statusFilter) && (!pendingPaymentOnly || sale.paymentStatus === "pending")),
+    [sales, statusFilter, pendingPaymentOnly],
+  );
+
   function lineLabel(line: SaleRecord["lines"][number]) {
     if (line.customItemName) return `${line.customItemName}${line.customSku ? ` (${line.customSku})` : ""} — custom`;
     return line.productName ?? products.find((product) => product.id === line.variantId)?.productName ?? "Unknown item";
@@ -174,13 +205,26 @@ export function Transactions() {
         </div>
         {exportRangeInvalid && <p className="transactions-export__error">The &ldquo;From&rdquo; date must be on or before the &ldquo;To&rdquo; date.</p>}
       </div>
+      <div className="transactions-filters">
+        <div className="chip-row chip-row--compact">
+          {(["all", "held", "quotation", "completed", "cancelled"] as const).map((value) => (
+            <button className={statusFilter === value ? "is-active" : ""} key={value} onClick={() => setStatusFilter(value)} type="button">
+              {value === "all" ? "All" : statusLabels[value]}
+            </button>
+          ))}
+        </div>
+        <label className="checkbox-field checkbox-field--inline">
+          <input checked={pendingPaymentOnly} onChange={(event) => setPendingPaymentOnly(event.target.checked)} type="checkbox" />
+          <span>Pending payment only</span>
+        </label>
+      </div>
       {loading ? (
         <p>Loading transactions…</p>
-      ) : !sales.length ? (
-        <div className="empty-state"><span>⇄</span><h3>No transactions yet</h3><p>Sales made in Cashier Mode will show up here.</p></div>
+      ) : !filteredSales.length ? (
+        <div className="empty-state"><span>⇄</span><h3>No matching transactions</h3><p>{sales.length ? "Try a different filter." : "Sales made in Cashier Mode will show up here."}</p></div>
       ) : (
         <div className="transactions-list">
-          {sales.map((sale) => {
+          {filteredSales.map((sale) => {
             const expanded = expandedId === sale.id;
             const history = historyBySale[sale.id];
             return (
@@ -189,6 +233,9 @@ export function Transactions() {
                   <div>
                     <strong>{invoiceNumber(sale.saleNumber)}</strong>
                     <span className={`transaction-status transaction-status--${sale.status}`}>{statusLabels[sale.status]}</span>
+                    {sale.status === "completed" && sale.paymentStatus === "pending" && (
+                      <span className="transaction-status transaction-status--pending-payment">Payment Pending</span>
+                    )}
                   </div>
                   <span>{formatDate(sale.createdAt)}</span>
                 </div>
@@ -226,6 +273,11 @@ export function Transactions() {
                   <button className="button button--secondary button--small" onClick={() => toggleDetails(sale)} type="button">
                     {expanded ? "Hide order details" : "View order details"}
                   </button>
+                  {sale.status === "completed" && sale.paymentStatus === "pending" && canProcessSale && recordingPaymentId !== sale.id && (
+                    <button className="button button--primary button--small" onClick={() => { setRecordingPaymentId(sale.id); setRecordPaymentDate(today()); setRecordPaymentMethod("cash"); }} type="button">
+                      Record payment received
+                    </button>
+                  )}
                   {sale.status === "completed" && canCancel && (
                     <button className="button button--secondary button--small" disabled={cancellingId === sale.id} onClick={() => cancelSale(sale)} type="button">
                       {cancellingId === sale.id ? "Cancelling…" : "Cancel & Return Stock"}
@@ -246,6 +298,16 @@ export function Transactions() {
                     </>
                   )}
                 </div>
+                {recordingPaymentId === sale.id && (
+                  <div className="transaction-card__complete-form">
+                    <label className="field"><span>Paid on</span><input onChange={(event) => setRecordPaymentDate(event.target.value)} type="date" value={recordPaymentDate} /></label>
+                    <label className="field"><span>Mode of payment</span><select onChange={(event) => setRecordPaymentMethod(event.target.value as PaymentMethod)} value={recordPaymentMethod}>{paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select></label>
+                    <div className="transaction-card__complete-form__actions">
+                      <button className="button button--secondary button--small" onClick={() => setRecordingPaymentId(null)} type="button">Cancel</button>
+                      <button className="button button--primary button--small" disabled={payingId === sale.id} onClick={() => recordPayment(sale)} type="button">{payingId === sale.id ? "Recording…" : "Confirm payment"}</button>
+                    </div>
+                  </div>
+                )}
                 {completingId === sale.id && (
                   <div className="transaction-card__complete-form">
                     <label className="field"><span>Balance paid on</span><input onChange={(event) => setBalancePaidDate(event.target.value)} type="date" value={balancePaidDate} /></label>
@@ -295,9 +357,10 @@ export function Transactions() {
                           ))}
                         </ul>
                       )}
-                      {(sale.completedByName || sale.cancelledByName) && (
+                      {(sale.completedByName || sale.cancelledByName || sale.paidByName) && (
                         <p className="transaction-card__history-summary">
                           {sale.completedByName && <>Completed by <strong>{sale.completedByName}</strong>. </>}
+                          {sale.paidByName && <>Payment recorded by <strong>{sale.paidByName}</strong>{sale.paidAt ? ` on ${formatDate(sale.paidAt)}` : ""}. </>}
                           {sale.cancelledByName && <>Cancelled by <strong>{sale.cancelledByName}</strong>{sale.cancelledAt ? ` on ${formatDate(sale.cancelledAt)}` : ""}.</>}
                         </p>
                       )}

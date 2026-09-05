@@ -140,7 +140,17 @@ export type CreateSaleInput = {
   notes?: string;
   /** Only meaningful for a held sale (reservation) -- how much was paid up front. */
   downpaymentAmount?: number;
+  /** Only meaningful for a "completed" sale -- the item is released now but
+   * payment hasn't been collected yet (different from a held reservation,
+   * where the item never left the store). */
+  payLater?: boolean;
   lines: SaleLineInput[];
+};
+
+/** Records payment on a completed sale that was posted with "pay later". */
+export type RecordSalePaymentInput = {
+  paidAt?: string;
+  paymentMethod: PaymentMethod;
 };
 
 /** Completes a previously held sale or quotation -- posts the inventory
@@ -190,10 +200,26 @@ export type SaleRecord = {
   completedByName?: string;
   cancelledByName?: string;
   cancelledAt?: string;
+  /** "pending" means the item was released but payment hasn't been
+   * collected yet ("pay later"). Only meaningful once status is completed. */
+  paymentStatus: "paid" | "pending";
+  paidAt?: string;
+  paidByName?: string;
+  customerId?: string;
+};
+
+export type CustomerSummary = {
+  id: string;
+  name: string;
+  phone?: string;
+  completedOrders: number;
+  totalSpent: number;
+  firstPurchaseAt?: string;
+  lastPurchaseAt?: string;
 };
 
 // One entry in a sale's edit/action history -- who did what, and when.
-export type SaleHistoryAction = "created_held" | "created_quotation" | "created_completed" | "completed" | "cancelled";
+export type SaleHistoryAction = "created_held" | "created_quotation" | "created_completed" | "completed" | "cancelled" | "payment_recorded";
 
 export type SaleHistoryEntry = {
   id: string;

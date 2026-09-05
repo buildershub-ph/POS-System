@@ -27,6 +27,10 @@ type SalesOverviewRow = {
   cancelled_by: string | null;
   cancelled_at: string | null;
   cancelled_by_name: string | null;
+  payment_status: "paid" | "pending";
+  paid_at: string | null;
+  paid_by_name: string | null;
+  customer_id: string | null;
   line_items: Array<{
     variantId: string | null;
     customItemName: string | null;
@@ -69,6 +73,10 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
     completedByName: row.completed_by_name ?? undefined,
     cancelledByName: row.cancelled_by_name ?? undefined,
     cancelledAt: row.cancelled_at ?? undefined,
+    paymentStatus: row.payment_status,
+    paidAt: row.paid_at ?? undefined,
+    paidByName: row.paid_by_name ?? undefined,
+    customerId: row.customer_id ?? undefined,
     lines: (row.line_items ?? []).map((line) => ({
       variantId: line.variantId ?? undefined,
       customItemName: line.customItemName ?? undefined,

@@ -30,6 +30,10 @@ export function Dashboard() {
 
       <section className="dashboard-card dashboard-card--wide"><div className="section-heading"><div><p className="eyebrow">Quick actions</p><h2>What would you like to do?</h2></div></div><div className="quick-action-grid"><Link href="/receive"><span>↧</span><strong>Receive stock</strong><small>Record a supplier delivery</small></Link><Link href="/scan"><span>⌗</span><strong>Scan product</strong><small>Find exact availability</small></Link><Link href="/inventory"><span>▣</span><strong>Browse inventory</strong><small>Search by category or SKU</small></Link><Link href="/cashier"><span>▤</span><strong>Open cashier</strong><small>Prepare a negotiated sale</small></Link></div></section>
 
+      {lowStock.length > 0 && (
+        <section className="dashboard-card dashboard-card--wide"><div className="section-heading"><div><p className="eyebrow">Needs reordering</p><h2>Low stock ({lowStock.length})</h2></div><Link href="/inventory?view=low-stock">View all {lowStock.length}</Link></div><div className="attention-list">{lowStock.slice(0, 8).map((product) => <Link href={`/inventory/${product.productSlug}?variant=${product.id}`} key={product.id}><ProductArtwork alt={product.photoAlt} kind={product.photo} /><span><strong>{product.productName}</strong><small>{product.sku} · reorder level {product.reorderLevel}</small></span><b>{product.available} left</b><i>›</i></Link>)}</div></section>
+      )}
+
       {draftIncoming.length > 0 && (
         <section className="dashboard-card dashboard-card--wide"><div className="section-heading"><div><p className="eyebrow">Needs confirmation</p><h2>Draft incoming stock</h2></div><Link href="/inventory">View all {draftIncoming.length}</Link></div><div className="attention-list">{draftIncoming.slice(0, 8).map((product) => <Link href={`/inventory/${product.productSlug}?variant=${product.id}`} key={product.id}><ProductArtwork alt={product.photoAlt} kind={product.photo} /><span><strong>{product.productName}</strong><small>{product.sku} · {product.sourceInvoice}</small></span><b>{product.incoming} ordered</b><i>›</i></Link>)}</div></section>
       )}

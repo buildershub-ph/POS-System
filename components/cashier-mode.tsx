@@ -63,6 +63,7 @@ export function CashierMode() {
   const [showNoteField, setShowNoteField] = useState(false);
   const [hasDownpayment, setHasDownpayment] = useState(false);
   const [downpaymentAmount, setDownpaymentAmount] = useState("");
+  const [payLater, setPayLater] = useState(false);
   const [saving, setSaving] = useState<SaleStatusToPost | null>(null);
   const [saleError, setSaleError] = useState("");
   const [saleMessage, setSaleMessage] = useState("");
@@ -177,6 +178,7 @@ export function CashierMode() {
         paymentMethod,
         notes: notes || undefined,
         downpaymentAmount: hasDownpayment ? Math.max(0, Number(downpaymentAmount) || 0) : undefined,
+        payLater: status === "completed" && payLater,
         lines: [
           ...cart.map((line) => ({
             variantId: line.product.id,
@@ -206,7 +208,10 @@ export function CashierMode() {
       if (!response.ok) throw new Error(result.error ?? "Sale could not be posted.");
 
       const label = status === "completed" ? "Sale" : status === "held" ? "Held sale" : "Quotation";
-      setSaleMessage(`${label} ${invoiceNumber(result.data.saleNumber)} saved${status === "completed" ? " — stock updated." : "."}`);
+      const paymentNote = status === "completed" && payLater
+        ? " Payment is pending — record it later in Transactions."
+        : status === "completed" ? " Stock updated." : "";
+      setSaleMessage(`${label} ${invoiceNumber(result.data.saleNumber)} saved.${paymentNote}`);
       setCart([]);
       setCustomLines([]);
       setCustomerName("");
@@ -215,6 +220,7 @@ export function CashierMode() {
       setShowNoteField(false);
       setHasDownpayment(false);
       setDownpaymentAmount("");
+      setPayLater(false);
       if (status === "completed") refetch();
     } catch (reason) {
       setSaleError(reason instanceof Error ? reason.message : "Sale could not be posted.");
@@ -332,10 +338,13 @@ export function CashierMode() {
           {showNoteField && <label className="field"><span>Note</span><textarea onChange={(event) => setNotes(event.target.value)} placeholder="Anything worth recording about this sale…" value={notes} /></label>}
           <div className="cart-footer">
             <div>
-              <label className="field"><span>Payment method</span><select onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)} value={paymentMethod}>{paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select></label>
+              {!payLater && <label className="field"><span>Payment method</span><select onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)} value={paymentMethod}>{paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select></label>}
               {hasDiscount && <label className="field"><span>Discount reason</span><select onChange={(event) => setDiscountReason(event.target.value)} value={discountReason}><option>Customer negotiation</option><option>Contractor pricing</option><option>Promotional discount</option><option>Damaged packaging</option></select></label>}
             </div>
             <div className="cart-totals"><div><span>Subtotal at SRP</span><strong>{formatPeso(totals.srp)}</strong></div><div><span>Discount</span><strong>-{formatPeso(totals.discount)}</strong></div><div><span>Total</span><strong>{formatPeso(totals.total)}</strong></div></div>
+          </div>
+          <div className="downpayment-field">
+            <label className="checkbox-field"><input checked={payLater} onChange={(event) => setPayLater(event.target.checked)} type="checkbox" /><span>Releasing the item now, customer will pay later (no payment collected yet)</span></label>
           </div>
           <div className="downpayment-field">
             <label className="checkbox-field"><input checked={hasDownpayment} onChange={(event) => setHasDownpayment(event.target.checked)} type="checkbox" /><span>Customer is reserving this with a downpayment (for Hold Sale)</span></label>

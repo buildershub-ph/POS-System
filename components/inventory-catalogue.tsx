@@ -1,32 +1,49 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { formatPeso } from "@/lib/mock-data";
 import { useInventory } from "@/lib/use-inventory";
 import { ProductArtwork } from "./product-artwork";
 import { StockBadge } from "./stock-badge";
 
+type StockFilter = "all" | "low-stock" | "out-of-stock";
+
 export function InventoryCatalogue() {
   const { categories, loading, products, error, refetch } = useInventory();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [stockFilter, setStockFilter] = useState<StockFilter>(() => {
+    const view = searchParams.get("view");
+    return view === "low-stock" || view === "out-of-stock" ? view : "all";
+  });
 
   const filteredProducts = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return products.filter((product) => {
       const matchesCategory = category === "All" || product.category === category;
       const matchesAvailability = !availableOnly || product.available > 0;
+      const matchesStockFilter = stockFilter === "all"
+        || (stockFilter === "low-stock" && product.availability === "stocked" && product.available > 0 && product.available <= product.reorderLevel)
+        || (stockFilter === "out-of-stock" && product.availability === "stocked" && product.available <= 0);
       const matchesQuery = !normalized || [product.productName, product.sku, product.supplierSku, product.barcode, product.brand, product.model]
         .join(" ").toLowerCase().includes(normalized);
-      return matchesCategory && matchesAvailability && matchesQuery;
+      return matchesCategory && matchesAvailability && matchesStockFilter && matchesQuery;
     });
-  }, [availableOnly, category, products, query]);
+  }, [availableOnly, category, products, query, stockFilter]);
 
   return (
     <section>
       {error && <div className="error-banner">{error} <button className="button button--secondary button--small" onClick={refetch} type="button">Retry</button></div>}
+      {stockFilter !== "all" && (
+        <div className="active-filter-banner">
+          <span>Showing only items {stockFilter === "low-stock" ? "at or below their reorder level" : "out of stock"}.</span>
+          <button className="button button--secondary button--small" onClick={() => setStockFilter("all")} type="button">Clear filter</button>
+        </div>
+      )}
       <div className="catalogue-tools">
         <label className="search-field search-field--large">
           <span>⌕</span>
@@ -41,6 +58,7 @@ export function InventoryCatalogue() {
         <button className={`filter-button ${availableOnly ? "is-active" : ""}`} onClick={() => setAvailableOnly((value) => !value)} type="button">
           <span>≡</span> Available only
         </button>
+        <Link className="button button--secondary button--small" href="/inventory/labels">🏷 Print barcode labels</Link>
       </div>
 
       <div className="chip-row" aria-label="Product categories">
