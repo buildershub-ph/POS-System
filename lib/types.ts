@@ -117,9 +117,14 @@ export type InventoryTransactionInput = {
 export type SaleStatus = "held" | "quotation" | "completed" | "cancelled";
 export type PaymentMethod = "cash" | "gcash" | "maya" | "bank_transfer" | "card" | "split";
 
+// A sale line is either a catalog product (variantId + locationId, deducts
+// stock) or a custom/one-off item not in the system at all (customItemName,
+// no stock impact — just a record of what was sold).
 export type SaleLineInput = {
-  variantId: string;
-  locationId: string;
+  variantId?: string;
+  locationId?: string;
+  customItemName?: string;
+  customSku?: string;
   quantity: number;
   sellingUnit: SellingUnit;
   originalSrp: number;
@@ -136,7 +141,9 @@ export type CreateSaleInput = {
 };
 
 export type SaleLineRecord = {
-  variantId: string;
+  variantId?: string;
+  customItemName?: string;
+  customSku?: string;
   quantity: number;
   sellingUnit: SellingUnit;
   originalSrp: number;

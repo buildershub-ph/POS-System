@@ -18,7 +18,9 @@ type SalesOverviewRow = {
   total_srp: number | string;
   line_count: number | string;
   line_items: Array<{
-    variantId: string;
+    variantId: string | null;
+    customItemName: string | null;
+    customSku: string | null;
     quantity: number | string;
     sellingUnit: SaleLineRecord["sellingUnit"];
     originalSrp: number | string;
@@ -47,7 +49,9 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
     totalSrp: number(row.total_srp),
     lineCount: number(row.line_count),
     lines: (row.line_items ?? []).map((line) => ({
-      variantId: line.variantId,
+      variantId: line.variantId ?? undefined,
+      customItemName: line.customItemName ?? undefined,
+      customSku: line.customSku ?? undefined,
       quantity: number(line.quantity),
       sellingUnit: line.sellingUnit,
       originalSrp: number(line.originalSrp),
@@ -78,6 +82,8 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json()) as CreateSaleInput;
   if (!body.lines?.length) return NextResponse.json({ error: "A sale needs at least one item." }, { status: 400 });
+  const invalidLine = body.lines.find((line) => !line.variantId && !line.customItemName?.trim());
+  if (invalidLine) return NextResponse.json({ error: "Every line needs either a catalogue product or a custom item name." }, { status: 400 });
 
   const response = await supabaseRest(request, "rpc/create_sale", {
     method: "POST",

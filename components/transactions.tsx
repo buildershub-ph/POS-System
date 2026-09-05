@@ -59,8 +59,9 @@ export function Transactions() {
     }
   }
 
-  function productName(variantId: string) {
-    return products.find((product) => product.id === variantId)?.productName ?? "Unknown item";
+  function lineLabel(line: SaleRecord["lines"][number]) {
+    if (line.customItemName) return `${line.customItemName}${line.customSku ? ` (${line.customSku})` : ""} — custom`;
+    return products.find((product) => product.id === line.variantId)?.productName ?? "Unknown item";
   }
 
   return (
@@ -92,7 +93,7 @@ export function Transactions() {
                 </div>
                 <div>
                   <small>Items</small>
-                  <p>{sale.lines.map((line) => `${productName(line.variantId)} × ${line.quantity}`).join(", ")}</p>
+                  <p>{sale.lines.map((line) => `${lineLabel(line)} × ${line.quantity}`).join(", ")}</p>
                 </div>
                 <div>
                   <small>Total</small>

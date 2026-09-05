@@ -15,6 +15,17 @@ type CartLine = {
   actualPrice: number;
 };
 
+// A custom item is a customer order for something not in the catalogue at
+// all -- not stocked, not on display. It's recorded on the sale for
+// bookkeeping only; it never touches inventory.
+type CustomCartLine = {
+  id: string;
+  name: string;
+  sku: string;
+  quantity: number;
+  actualPrice: number;
+};
+
 type SaleStatusToPost = "held" | "quotation" | "completed";
 
 const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
@@ -45,6 +56,12 @@ export function CashierMode() {
   const [category, setCategory] = useState("All");
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [customLines, setCustomLines] = useState<CustomCartLine[]>([]);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customSku, setCustomSku] = useState("");
+  const [customPrice, setCustomPrice] = useState("");
+  const [customError, setCustomError] = useState("");
   const [customerName, setCustomerName] = useState("Walk-in Customer");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [discountReason, setDiscountReason] = useState("Customer negotiation");
@@ -53,6 +70,8 @@ export function CashierMode() {
   const [saving, setSaving] = useState<SaleStatusToPost | null>(null);
   const [saleError, setSaleError] = useState("");
   const [saleMessage, setSaleMessage] = useState("");
+
+  const itemCount = cart.length + customLines.length;
 
   const filteredProducts = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -64,10 +83,13 @@ export function CashierMode() {
   }, [category, products, query]);
 
   const totals = useMemo(() => {
-    const srp = cart.reduce((sum, line) => sum + (line.product.srp ?? 0) * line.quantity, 0);
-    const total = cart.reduce((sum, line) => sum + line.actualPrice * line.quantity, 0);
+    const productSrp = cart.reduce((sum, line) => sum + (line.product.srp ?? 0) * line.quantity, 0);
+    const productTotal = cart.reduce((sum, line) => sum + line.actualPrice * line.quantity, 0);
+    const customTotal = customLines.reduce((sum, line) => sum + line.actualPrice * line.quantity, 0);
+    const srp = productSrp + customTotal;
+    const total = productTotal + customTotal;
     return { srp, total, discount: srp - total };
-  }, [cart]);
+  }, [cart, customLines]);
 
   const hasDiscount = cart.some((line) => line.actualPrice < (line.product.srp ?? 0));
 
@@ -101,8 +123,31 @@ export function CashierMode() {
     setCart((current) => current.map((line) => line.product.id === id ? { ...line, ...change } : line));
   }
 
+  function updateCustomLine(id: string, change: Partial<Pick<CustomCartLine, "quantity" | "actualPrice">>) {
+    setCustomLines((current) => current.map((line) => line.id === id ? { ...line, ...change } : line));
+  }
+
+  function addCustomItem() {
+    const name = customName.trim();
+    const price = Number(customPrice);
+    if (!name) {
+      setCustomError("Item name is required.");
+      return;
+    }
+    if (!Number.isFinite(price) || price < 0) {
+      setCustomError("Enter a valid price per piece.");
+      return;
+    }
+    setCustomLines((current) => [...current, { id: `custom-${Date.now()}`, name, sku: customSku.trim(), quantity: 1, actualPrice: price }]);
+    setCustomName("");
+    setCustomSku("");
+    setCustomPrice("");
+    setCustomError("");
+    setShowCustomForm(false);
+  }
+
   async function submitSale(status: SaleStatusToPost) {
-    if (!cart.length) return;
+    if (!itemCount) return;
     const missingLocation = cart.find((line) => !line.product.locationId);
     if (missingLocation) {
       setSaleError(`${missingLocation.product.productName} has no storage location on record — it can't be sold until that's fixed.`);
@@ -117,15 +162,25 @@ export function CashierMode() {
         customerName,
         paymentMethod,
         notes: notes || undefined,
-        lines: cart.map((line) => ({
-          variantId: line.product.id,
-          locationId: line.product.locationId!,
-          quantity: line.quantity,
-          sellingUnit: line.product.sellingUnit,
-          originalSrp: line.product.srp ?? line.actualPrice,
-          actualSellingPrice: line.actualPrice,
-          discountReason: line.actualPrice < (line.product.srp ?? 0) ? discountReason : undefined,
-        })),
+        lines: [
+          ...cart.map((line) => ({
+            variantId: line.product.id,
+            locationId: line.product.locationId!,
+            quantity: line.quantity,
+            sellingUnit: line.product.sellingUnit,
+            originalSrp: line.product.srp ?? line.actualPrice,
+            actualSellingPrice: line.actualPrice,
+            discountReason: line.actualPrice < (line.product.srp ?? 0) ? discountReason : undefined,
+          })),
+          ...customLines.map((line) => ({
+            customItemName: line.name,
+            customSku: line.sku || undefined,
+            quantity: line.quantity,
+            sellingUnit: "piece" as const,
+            originalSrp: line.actualPrice,
+            actualSellingPrice: line.actualPrice,
+          })),
+        ],
       };
       const response = await fetch("/api/sales", {
         method: "POST",
@@ -138,6 +193,7 @@ export function CashierMode() {
       const label = status === "completed" ? "Sale" : status === "held" ? "Held sale" : "Quotation";
       setSaleMessage(`${label} ${invoiceNumber(result.data.saleNumber)} saved${status === "completed" ? " — stock updated." : "."}`);
       setCart([]);
+      setCustomLines([]);
       setNotes("");
       setShowNoteField(false);
       if (status === "completed") refetch();
@@ -157,7 +213,7 @@ export function CashierMode() {
         <div><span className="cashier-user"><i>{initials(displayName)}</i><span><strong>{displayName}</strong><small>{user.role === "cashier" ? "Cashier" : user.role.replaceAll("_", " ")}</small></span></span><Link className="button button--secondary button--small" href="/">Exit Cashier</Link></div>
       </header>
 
-      <div className="cashier-tabs"><button className={mobileTab === "products" ? "is-active" : ""} onClick={() => setMobileTab("products")}>Products</button><button className={mobileTab === "cart" ? "is-active" : ""} onClick={() => setMobileTab("cart")}>Current Sale <span>{cart.length}</span></button></div>
+      <div className="cashier-tabs"><button className={mobileTab === "products" ? "is-active" : ""} onClick={() => setMobileTab("products")}>Products</button><button className={mobileTab === "cart" ? "is-active" : ""} onClick={() => setMobileTab("cart")}>Current Sale <span>{itemCount}</span></button></div>
 
       <main className="cashier-workspace">
         <section className={`cashier-products ${mobileTab !== "products" ? "cashier-mobile-hidden" : ""}`}>
@@ -175,6 +231,25 @@ export function CashierMode() {
           {scanMessage && <p className="scan-inline-message">{scanMessage}</p>}
           <label className="search-field"><span>⌕</span><input onChange={(event) => setQuery(event.target.value)} placeholder="Search products by name, SKU or barcode" value={query} /></label>
           <div className="chip-row chip-row--compact">{categories.map((item) => <button className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div>
+
+          <button className="custom-item-launcher" onClick={() => setShowCustomForm((value) => !value)} type="button">
+            <span>✎</span> Item not in our system? Add a custom order
+          </button>
+          {showCustomForm && (
+            <div className="custom-item-form">
+              <div className="form-grid">
+                <label className="field"><span>Item name *</span><input onChange={(event) => setCustomName(event.target.value)} placeholder="What the customer is ordering" value={customName} /></label>
+                <label className="field"><span>SKU</span><input onChange={(event) => setCustomSku(event.target.value)} placeholder="Optional — supplier code, etc." value={customSku} /></label>
+                <label className="field"><span>Price per piece *</span><input min="0" onChange={(event) => setCustomPrice(event.target.value)} placeholder="0.00" step="0.01" type="number" value={customPrice} /></label>
+              </div>
+              {customError && <small className="inline-error">{customError}</small>}
+              <div className="custom-item-form__actions">
+                <button className="button button--secondary button--small" onClick={() => { setShowCustomForm(false); setCustomError(""); }} type="button">Cancel</button>
+                <button className="button button--primary button--small" onClick={addCustomItem} type="button">Add to sale</button>
+              </div>
+            </div>
+          )}
+
           <div className="cashier-section-title"><h2>Products</h2><select aria-label="Sort products"><option>Relevance</option><option>Recently sold</option><option>Favourites</option></select></div>
           <div className="cashier-product-grid">{filteredProducts.map((product) => (
             <button className="cashier-product-card" key={product.id} onClick={() => addProduct(product)}>
@@ -187,18 +262,32 @@ export function CashierMode() {
 
         <section className={`cashier-cart ${mobileTab !== "cart" ? "cashier-mobile-hidden" : ""}`}>
           <div className="sale-heading"><div><p className="eyebrow">Current transaction</p><h2>New sale</h2></div><div><select aria-label="Customer" onChange={(event) => setCustomerName(event.target.value)} value={customerName}><option>Walk-in Customer</option><option>Contractor Account</option></select></div></div>
-          <div className="cart-table"><div className="cart-table__header"><span>Item</span><span>Qty</span><span>SRP</span><span>Actual price</span><span>Total</span></div>{cart.map((line, index) => (
-            <div className="cart-line" key={line.product.id}>
-              <span className="cart-index">{index + 1}</span><ProductArtwork alt={line.product.photoAlt} kind={line.product.photo} />
-              <div className="cart-line__name"><strong>{line.product.productName}</strong><small>{line.product.color ?? line.product.model} · {line.product.size ?? line.product.model}</small><small>SKU: {line.product.sku}</small>{(isPreorder(line.product) || line.quantity > line.product.available) && <small className="preorder-note">Pre-order — order from supplier</small>}</div>
-              <label><span className="mobile-only">Quantity</span><input min="1" onChange={(event) => updateLine(line.product.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} type="number" value={line.quantity} /><small>{line.product.sellingUnit.replaceAll("_", " ")}</small></label>
-              <span className="cart-line__srp">{formatPeso(line.product.srp)}</span>
-              <label><span className="mobile-only">Actual price</span><input aria-label={`Actual selling price for ${line.product.productName}`} min="0" onChange={(event) => updateLine(line.product.id, { actualPrice: Math.max(0, Number(event.target.value)) })} type="number" value={line.actualPrice} />{line.actualPrice < (line.product.srp ?? 0) && <small className="approval-note">{user.role === "owner" || user.role === "manager" ? "Discount auto-approved" : "Needs owner/manager approval"}</small>}</label>
-              <strong className="cart-line__total">{formatPeso(line.actualPrice * line.quantity)}</strong>
-              <button className="cart-remove" aria-label={`Remove ${line.product.productName}`} onClick={() => setCart((current) => current.filter((item) => item.product.id !== line.product.id))}>×</button>
-            </div>
-          ))}</div>
-          {!cart.length && <div className="empty-state"><span>▤</span><h3>Cart is empty</h3><p>Scan a barcode or tap a product to add it.</p></div>}
+          <div className="cart-table"><div className="cart-table__header"><span>Item</span><span>Qty</span><span>SRP</span><span>Actual price</span><span>Total</span></div>
+            {cart.map((line, index) => (
+              <div className="cart-line" key={line.product.id}>
+                <span className="cart-index">{index + 1}</span><ProductArtwork alt={line.product.photoAlt} kind={line.product.photo} />
+                <div className="cart-line__name"><strong>{line.product.productName}</strong><small>{line.product.color ?? line.product.model} · {line.product.size ?? line.product.model}</small><small>SKU: {line.product.sku}</small>{(isPreorder(line.product) || line.quantity > line.product.available) && <small className="preorder-note">Pre-order — order from supplier</small>}</div>
+                <label><span className="mobile-only">Quantity</span><input min="1" onChange={(event) => updateLine(line.product.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} type="number" value={line.quantity} /><small>{line.product.sellingUnit.replaceAll("_", " ")}</small></label>
+                <span className="cart-line__srp">{formatPeso(line.product.srp)}</span>
+                <label><span className="mobile-only">Actual price</span><input aria-label={`Actual selling price for ${line.product.productName}`} min="0" onChange={(event) => updateLine(line.product.id, { actualPrice: Math.max(0, Number(event.target.value)) })} type="number" value={line.actualPrice} />{line.actualPrice < (line.product.srp ?? 0) && <small className="approval-note">{user.role === "owner" || user.role === "manager" ? "Discount auto-approved" : "Needs owner/manager approval"}</small>}</label>
+                <strong className="cart-line__total">{formatPeso(line.actualPrice * line.quantity)}</strong>
+                <button className="cart-remove" aria-label={`Remove ${line.product.productName}`} onClick={() => setCart((current) => current.filter((item) => item.product.id !== line.product.id))}>×</button>
+              </div>
+            ))}
+            {customLines.map((line, index) => (
+              <div className="cart-line" key={line.id}>
+                <span className="cart-index">{cart.length + index + 1}</span>
+                <div className="product-artwork product-artwork--generic custom-item-swatch" role="img" aria-label="Custom item"><span>✎</span></div>
+                <div className="cart-line__name"><strong>{line.name}</strong><small>{line.sku || "No SKU"}</small><small className="preorder-note">Custom item — not in our system</small></div>
+                <label><span className="mobile-only">Quantity</span><input min="1" onChange={(event) => updateCustomLine(line.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} type="number" value={line.quantity} /><small>piece(s)</small></label>
+                <span className="cart-line__srp">{formatPeso(line.actualPrice)}</span>
+                <label><span className="mobile-only">Actual price</span><input aria-label={`Price for ${line.name}`} min="0" onChange={(event) => updateCustomLine(line.id, { actualPrice: Math.max(0, Number(event.target.value)) })} type="number" value={line.actualPrice} /></label>
+                <strong className="cart-line__total">{formatPeso(line.actualPrice * line.quantity)}</strong>
+                <button className="cart-remove" aria-label={`Remove ${line.name}`} onClick={() => setCustomLines((current) => current.filter((item) => item.id !== line.id))}>×</button>
+              </div>
+            ))}
+          </div>
+          {!itemCount && <div className="empty-state"><span>▤</span><h3>Cart is empty</h3><p>Scan a barcode, tap a product, or add a custom item.</p></div>}
           <button className="add-note" onClick={() => setShowNoteField((value) => !value)} type="button">＋ Add transaction note</button>
           {showNoteField && <label className="field"><span>Note</span><textarea onChange={(event) => setNotes(event.target.value)} placeholder="Anything worth recording about this sale…" value={notes} /></label>}
           <div className="cart-footer">
@@ -211,14 +300,14 @@ export function CashierMode() {
           {saleError && <div className="error-banner">{saleError}</div>}
           {saleMessage && <div className="success-banner"><span>✓</span><p>{saleMessage}</p></div>}
           <div className="cashier-actions">
-            <button className="button button--secondary" disabled={!cart.length || saving !== null} onClick={() => submitSale("held")} type="button">{saving === "held" ? "Holding…" : "Hold Sale"}</button>
-            <button className="button button--secondary" disabled={!cart.length || saving !== null} onClick={() => submitSale("quotation")} type="button">{saving === "quotation" ? "Saving…" : "Save as Quotation"}</button>
-            <button className="button button--primary" disabled={!cart.length || saving !== null} onClick={() => submitSale("completed")} type="button">{saving === "completed" ? "Completing…" : "Complete Sale"}</button>
+            <button className="button button--secondary" disabled={!itemCount || saving !== null} onClick={() => submitSale("held")} type="button">{saving === "held" ? "Holding…" : "Hold Sale"}</button>
+            <button className="button button--secondary" disabled={!itemCount || saving !== null} onClick={() => submitSale("quotation")} type="button">{saving === "quotation" ? "Saving…" : "Save as Quotation"}</button>
+            <button className="button button--primary" disabled={!itemCount || saving !== null} onClick={() => submitSale("completed")} type="button">{saving === "completed" ? "Completing…" : "Complete Sale"}</button>
           </div>
         </section>
       </main>
 
-      <button className="mobile-cart-summary" onClick={() => setMobileTab("cart")}><span>{cart.length} item types</span><strong>{formatPeso(totals.total)}</strong><span>View cart ›</span></button>
+      <button className="mobile-cart-summary" onClick={() => setMobileTab("cart")}><span>{itemCount} item types</span><strong>{formatPeso(totals.total)}</strong><span>View cart ›</span></button>
     </div>
   );
 }
