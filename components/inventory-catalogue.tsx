@@ -8,7 +8,7 @@ import { ProductArtwork } from "./product-artwork";
 import { StockBadge } from "./stock-badge";
 
 export function InventoryCatalogue() {
-  const { categories, loading, products } = useInventory();
+  const { categories, loading, products, error, refetch } = useInventory();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -26,6 +26,7 @@ export function InventoryCatalogue() {
 
   return (
     <section>
+      {error && <div className="error-banner">{error} <button className="button button--secondary button--small" onClick={refetch} type="button">Retry</button></div>}
       <div className="catalogue-tools">
         <label className="search-field search-field--large">
           <span>⌕</span>

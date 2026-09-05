@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatPeso, invoiceNumber, paymentMethods } from "@/lib/mock-data";
 import type { CreateSaleInput, PaymentMethod, ProductVariant } from "@/lib/types";
+import { useBarcodeCamera } from "@/lib/use-barcode-camera";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useInventory } from "@/lib/use-inventory";
 import { ProductArtwork } from "./product-artwork";
@@ -40,10 +41,11 @@ function initials(name?: string) {
 
 export function CashierMode() {
   const { user } = useCurrentUser();
-  const { categories, products, refetch } = useInventory();
+  const { categories, products, refetch, error: inventoryError } = useInventory();
   const [query, setQuery] = useState("");
   const [scanCode, setScanCode] = useState("");
   const [scanMessage, setScanMessage] = useState("");
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [category, setCategory] = useState("All");
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -99,6 +101,19 @@ export function CashierMode() {
       return [...current, { product, quantity: 1, actualPrice }];
     });
   }
+
+  const { videoRef: cameraVideoRef, start: startCamera, stop: stopCamera, status: cameraStatus, errorMessage: cameraError } = useBarcodeCamera({
+    onDetect: (code) => lookupScan(code),
+  });
+
+  useEffect(() => {
+    if (showCameraScanner) {
+      startCamera();
+      return stopCamera;
+    }
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCameraScanner]);
 
   function lookupScan(code: string) {
     const normalized = code.trim().toLowerCase();
@@ -221,17 +236,34 @@ export function CashierMode() {
 
       <main className="cashier-workspace">
         <section className={`cashier-products ${mobileTab !== "products" ? "cashier-mobile-hidden" : ""}`}>
-          <form onSubmit={(event) => { event.preventDefault(); lookupScan(scanCode); }}>
-            <label className="search-field search-field--large">
-              <span>⌗</span>
-              <input
-                aria-label="Scan barcode or enter SKU"
-                onChange={(event) => setScanCode(event.target.value)}
-                placeholder="Scan barcode or enter SKU to check stock or add to sale"
-                value={scanCode}
-              />
-            </label>
-          </form>
+          {inventoryError && <div className="error-banner">{inventoryError} <button className="button button--secondary button--small" onClick={refetch} type="button">Retry</button></div>}
+          <div className="cashier-scan-row">
+            <form onSubmit={(event) => { event.preventDefault(); lookupScan(scanCode); }}>
+              <label className="search-field search-field--large">
+                <span>⌗</span>
+                <input
+                  aria-label="Scan barcode or enter SKU"
+                  onChange={(event) => setScanCode(event.target.value)}
+                  placeholder="Scan barcode or enter SKU to check stock or add to sale"
+                  value={scanCode}
+                />
+              </label>
+            </form>
+            <button className={`button button--small ${showCameraScanner ? "button--primary" : "button--secondary"}`} onClick={() => setShowCameraScanner((value) => !value)} type="button">
+              📷 {showCameraScanner ? "Close camera" : "Scan with camera"}
+            </button>
+          </div>
+          {showCameraScanner && (
+            <div className="camera-scan-panel">
+              <video ref={cameraVideoRef} playsInline muted aria-label="Barcode camera preview" />
+              <div className="camera-scan-panel__message">
+                {cameraStatus === "starting" && "Starting camera…"}
+                {cameraStatus === "scanning" && "Point the camera at a barcode — items are added automatically."}
+                {cameraStatus === "error" && (cameraError || "Camera unavailable.")}
+              </div>
+              {cameraStatus === "error" && <button className="button button--secondary button--small" onClick={startCamera} type="button">Retry camera</button>}
+            </div>
+          )}
           {scanMessage && <p className="scan-inline-message">{scanMessage}</p>}
           <label className="search-field"><span>⌕</span><input onChange={(event) => setQuery(event.target.value)} placeholder="Search products by name, SKU or barcode" value={query} /></label>
           <div className="chip-row chip-row--compact">{categories.map((item) => <button className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div>
