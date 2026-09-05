@@ -85,7 +85,7 @@ export function Transactions() {
               <div className="transaction-card__body">
                 <div>
                   <small>Customer</small>
-                  <p>{sale.customerName ?? "Walk-in Customer"}</p>
+                  <p>{sale.customerName ?? "—"}{sale.customerContactNumber && <><br /><small>{sale.customerContactNumber}</small></>}</p>
                 </div>
                 <div>
                   <small>Payment</small>

@@ -134,7 +134,8 @@ export type SaleLineInput = {
 
 export type CreateSaleInput = {
   status: "held" | "quotation" | "completed";
-  customerName?: string;
+  customerName: string;
+  customerContactNumber?: string;
   paymentMethod?: PaymentMethod;
   notes?: string;
   lines: SaleLineInput[];
@@ -156,6 +157,7 @@ export type SaleRecord = {
   saleNumber: number;
   status: SaleStatus;
   customerName?: string;
+  customerContactNumber?: string;
   paymentMethod?: PaymentMethod;
   notes?: string;
   inventoryTransactionId?: string;

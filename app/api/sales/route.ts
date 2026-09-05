@@ -9,6 +9,7 @@ type SalesOverviewRow = {
   sale_number: number;
   status: SaleStatus;
   customer_name: string | null;
+  customer_contact_number: string | null;
   payment_method: PaymentMethod | null;
   notes: string | null;
   inventory_transaction_id: string | null;
@@ -40,6 +41,7 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
     saleNumber: row.sale_number,
     status: row.status,
     customerName: row.customer_name ?? undefined,
+    customerContactNumber: row.customer_contact_number ?? undefined,
     paymentMethod: row.payment_method ?? undefined,
     notes: row.notes ?? undefined,
     inventoryTransactionId: row.inventory_transaction_id ?? undefined,
@@ -81,6 +83,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = (await request.json()) as CreateSaleInput;
+  if (!body.customerName?.trim()) return NextResponse.json({ error: "Customer full name is required." }, { status: 400 });
   if (!body.lines?.length) return NextResponse.json({ error: "A sale needs at least one item." }, { status: 400 });
   const invalidLine = body.lines.find((line) => !line.variantId && !line.customItemName?.trim());
   if (invalidLine) return NextResponse.json({ error: "Every line needs either a catalogue product or a custom item name." }, { status: 400 });

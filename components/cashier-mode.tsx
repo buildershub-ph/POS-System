@@ -62,7 +62,8 @@ export function CashierMode() {
   const [customSku, setCustomSku] = useState("");
   const [customPrice, setCustomPrice] = useState("");
   const [customError, setCustomError] = useState("");
-  const [customerName, setCustomerName] = useState("Walk-in Customer");
+  const [customerName, setCustomerName] = useState("");
+  const [customerContact, setCustomerContact] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [discountReason, setDiscountReason] = useState("Customer negotiation");
   const [notes, setNotes] = useState("");
@@ -148,6 +149,10 @@ export function CashierMode() {
 
   async function submitSale(status: SaleStatusToPost) {
     if (!itemCount) return;
+    if (!customerName.trim()) {
+      setSaleError("Customer full name is required.");
+      return;
+    }
     const missingLocation = cart.find((line) => !line.product.locationId);
     if (missingLocation) {
       setSaleError(`${missingLocation.product.productName} has no storage location on record — it can't be sold until that's fixed.`);
@@ -159,7 +164,8 @@ export function CashierMode() {
     try {
       const payload: CreateSaleInput = {
         status,
-        customerName,
+        customerName: customerName.trim(),
+        customerContactNumber: customerContact.trim() || undefined,
         paymentMethod,
         notes: notes || undefined,
         lines: [
@@ -194,6 +200,8 @@ export function CashierMode() {
       setSaleMessage(`${label} ${invoiceNumber(result.data.saleNumber)} saved${status === "completed" ? " — stock updated." : "."}`);
       setCart([]);
       setCustomLines([]);
+      setCustomerName("");
+      setCustomerContact("");
       setNotes("");
       setShowNoteField(false);
       if (status === "completed") refetch();
@@ -261,7 +269,11 @@ export function CashierMode() {
         </section>
 
         <section className={`cashier-cart ${mobileTab !== "cart" ? "cashier-mobile-hidden" : ""}`}>
-          <div className="sale-heading"><div><p className="eyebrow">Current transaction</p><h2>New sale</h2></div><div><select aria-label="Customer" onChange={(event) => setCustomerName(event.target.value)} value={customerName}><option>Walk-in Customer</option><option>Contractor Account</option></select></div></div>
+          <div className="sale-heading"><div><p className="eyebrow">Current transaction</p><h2>New sale</h2></div></div>
+          <div className="customer-fields">
+            <label className="field"><span>Customer full name *</span><input aria-label="Customer full name" onChange={(event) => setCustomerName(event.target.value)} placeholder="e.g. Ana Cruz" value={customerName} /></label>
+            <label className="field"><span>Contact number</span><input aria-label="Customer contact number" onChange={(event) => setCustomerContact(event.target.value)} placeholder="Optional" type="tel" value={customerContact} /></label>
+          </div>
           <div className="cart-table"><div className="cart-table__header"><span>Item</span><span>Qty</span><span>SRP</span><span>Actual price</span><span>Total</span></div>
             {cart.map((line, index) => (
               <div className="cart-line" key={line.product.id}>
@@ -300,9 +312,9 @@ export function CashierMode() {
           {saleError && <div className="error-banner">{saleError}</div>}
           {saleMessage && <div className="success-banner"><span>✓</span><p>{saleMessage}</p></div>}
           <div className="cashier-actions">
-            <button className="button button--secondary" disabled={!itemCount || saving !== null} onClick={() => submitSale("held")} type="button">{saving === "held" ? "Holding…" : "Hold Sale"}</button>
-            <button className="button button--secondary" disabled={!itemCount || saving !== null} onClick={() => submitSale("quotation")} type="button">{saving === "quotation" ? "Saving…" : "Save as Quotation"}</button>
-            <button className="button button--primary" disabled={!itemCount || saving !== null} onClick={() => submitSale("completed")} type="button">{saving === "completed" ? "Completing…" : "Complete Sale"}</button>
+            <button className="button button--secondary" disabled={!itemCount || !customerName.trim() || saving !== null} onClick={() => submitSale("held")} type="button">{saving === "held" ? "Holding…" : "Hold Sale"}</button>
+            <button className="button button--secondary" disabled={!itemCount || !customerName.trim() || saving !== null} onClick={() => submitSale("quotation")} type="button">{saving === "quotation" ? "Saving…" : "Save as Quotation"}</button>
+            <button className="button button--primary" disabled={!itemCount || !customerName.trim() || saving !== null} onClick={() => submitSale("completed")} type="button">{saving === "completed" ? "Completing…" : "Complete Sale"}</button>
           </div>
         </section>
       </main>
