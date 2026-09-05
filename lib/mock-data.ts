@@ -1,7 +1,16 @@
 import { buildersHubCatalogue } from "./builders-hub-catalogue";
-import type { ProductVariant } from "./types";
+import type { PaymentMethod, ProductVariant } from "./types";
 
 export const categories = ["All", "Tiles", "Ceiling Panel", "Fluted Panel", "Doors", "Door Jamb"];
+
+export const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
+  { value: "cash", label: "Cash" },
+  { value: "gcash", label: "GCash" },
+  { value: "maya", label: "Maya" },
+  { value: "bank_transfer", label: "Bank transfer" },
+  { value: "card", label: "Card" },
+  { value: "split", label: "Split payment" },
+];
 
 export const products: ProductVariant[] = buildersHubCatalogue;
 

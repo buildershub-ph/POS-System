@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { formatPeso, invoiceNumber } from "@/lib/mock-data";
+import { formatPeso, invoiceNumber, paymentMethods } from "@/lib/mock-data";
 import type { CreateSaleInput, PaymentMethod, ProductVariant } from "@/lib/types";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useInventory } from "@/lib/use-inventory";
@@ -27,15 +27,6 @@ type CustomCartLine = {
 };
 
 type SaleStatusToPost = "held" | "quotation" | "completed";
-
-const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
-  { value: "cash", label: "Cash" },
-  { value: "gcash", label: "GCash" },
-  { value: "maya", label: "Maya" },
-  { value: "bank_transfer", label: "Bank transfer" },
-  { value: "card", label: "Card" },
-  { value: "split", label: "Split payment" },
-];
 
 function isPreorder(product: ProductVariant) {
   return product.availability === "display_only" || product.available <= 0;

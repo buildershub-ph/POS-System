@@ -147,6 +147,7 @@ export type CreateSaleInput = {
  * transaction at this point and records when the remaining balance was paid. */
 export type CompleteSaleInput = {
   balancePaidAt?: string;
+  balancePaymentMethod?: PaymentMethod;
   downpaymentAmount?: number;
 };
 
@@ -178,5 +179,6 @@ export type SaleRecord = {
   downpaymentAmount: number;
   balanceDue: number;
   balancePaidAt?: string;
+  balancePaymentMethod?: PaymentMethod;
   lines: SaleLineRecord[];
 };

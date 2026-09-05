@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatPeso, invoiceNumber } from "@/lib/mock-data";
+import { formatPeso, invoiceNumber, paymentMethods } from "@/lib/mock-data";
 import { can } from "@/lib/permissions";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useInventory } from "@/lib/use-inventory";
-import type { SaleRecord } from "@/lib/types";
+import type { PaymentMethod, SaleRecord } from "@/lib/types";
 
 const statusLabels: Record<SaleRecord["status"], string> = {
   held: "Held",
@@ -32,6 +32,7 @@ export function Transactions() {
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [balancePaidDate, setBalancePaidDate] = useState(today());
+  const [balancePaymentMethod, setBalancePaymentMethod] = useState<PaymentMethod>("cash");
   const canCancel = can(user.role, "transferStock");
   const canProcessSale = can(user.role, "processSale");
 
@@ -74,7 +75,7 @@ export function Transactions() {
       const response = await fetch(`/api/sales/${sale.id}/complete`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ balancePaidAt: `${balancePaidDate}T00:00:00` }),
+        body: JSON.stringify({ balancePaidAt: `${balancePaidDate}T00:00:00`, balancePaymentMethod }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Sale could not be completed.");
@@ -133,7 +134,7 @@ export function Transactions() {
                 <div className="transaction-card__reservation">
                   <span>Downpayment: <strong>{formatPeso(sale.downpaymentAmount)}</strong></span>
                   <span>Balance due: <strong>{formatPeso(sale.balanceDue)}</strong></span>
-                  {sale.balancePaidAt && <span>Balance paid: <strong>{new Date(sale.balancePaidAt).toLocaleDateString("en-PH")}</strong></span>}
+                  {sale.balancePaidAt && <span>Balance paid: <strong>{new Date(sale.balancePaidAt).toLocaleDateString("en-PH")}{sale.balancePaymentMethod ? ` (${sale.balancePaymentMethod.replaceAll("_", " ")})` : ""}</strong></span>}
                 </div>
               )}
               {sale.notes && <p className="transaction-card__note">{sale.notes}</p>}
@@ -147,7 +148,7 @@ export function Transactions() {
               {(sale.status === "held" || sale.status === "quotation") && (
                 <div className="transaction-card__actions">
                   {canProcessSale && completingId !== sale.id && (
-                    <button className="button button--primary button--small" onClick={() => { setCompletingId(sale.id); setBalancePaidDate(today()); }} type="button">
+                    <button className="button button--primary button--small" onClick={() => { setCompletingId(sale.id); setBalancePaidDate(today()); setBalancePaymentMethod("cash"); }} type="button">
                       {sale.status === "held" ? "Customer picked up — complete sale" : "Convert to completed sale"}
                     </button>
                   )}
@@ -161,6 +162,7 @@ export function Transactions() {
               {completingId === sale.id && (
                 <div className="transaction-card__complete-form">
                   <label className="field"><span>Balance paid on</span><input onChange={(event) => setBalancePaidDate(event.target.value)} type="date" value={balancePaidDate} /></label>
+                  <label className="field"><span>Mode of payment</span><select onChange={(event) => setBalancePaymentMethod(event.target.value as PaymentMethod)} value={balancePaymentMethod}>{paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select></label>
                   <div className="transaction-card__complete-form__actions">
                     <button className="button button--secondary button--small" onClick={() => setCompletingId(null)} type="button">Cancel</button>
                     <button className="button button--primary button--small" disabled={payingId === sale.id} onClick={() => completeSale(sale)} type="button">{payingId === sale.id ? "Completing…" : "Confirm & deduct stock"}</button>
