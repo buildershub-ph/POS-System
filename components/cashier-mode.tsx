@@ -68,6 +68,8 @@ export function CashierMode() {
   const [discountReason, setDiscountReason] = useState("Customer negotiation");
   const [notes, setNotes] = useState("");
   const [showNoteField, setShowNoteField] = useState(false);
+  const [hasDownpayment, setHasDownpayment] = useState(false);
+  const [downpaymentAmount, setDownpaymentAmount] = useState("");
   const [saving, setSaving] = useState<SaleStatusToPost | null>(null);
   const [saleError, setSaleError] = useState("");
   const [saleMessage, setSaleMessage] = useState("");
@@ -168,6 +170,7 @@ export function CashierMode() {
         customerContactNumber: customerContact.trim() || undefined,
         paymentMethod,
         notes: notes || undefined,
+        downpaymentAmount: hasDownpayment ? Math.max(0, Number(downpaymentAmount) || 0) : undefined,
         lines: [
           ...cart.map((line) => ({
             variantId: line.product.id,
@@ -204,6 +207,8 @@ export function CashierMode() {
       setCustomerContact("");
       setNotes("");
       setShowNoteField(false);
+      setHasDownpayment(false);
+      setDownpaymentAmount("");
       if (status === "completed") refetch();
     } catch (reason) {
       setSaleError(reason instanceof Error ? reason.message : "Sale could not be posted.");
@@ -308,6 +313,12 @@ export function CashierMode() {
               {hasDiscount && <label className="field"><span>Discount reason</span><select onChange={(event) => setDiscountReason(event.target.value)} value={discountReason}><option>Customer negotiation</option><option>Contractor pricing</option><option>Promotional discount</option><option>Damaged packaging</option></select></label>}
             </div>
             <div className="cart-totals"><div><span>Subtotal at SRP</span><strong>{formatPeso(totals.srp)}</strong></div><div><span>Discount</span><strong>-{formatPeso(totals.discount)}</strong></div><div><span>Total</span><strong>{formatPeso(totals.total)}</strong></div></div>
+          </div>
+          <div className="downpayment-field">
+            <label className="checkbox-field"><input checked={hasDownpayment} onChange={(event) => setHasDownpayment(event.target.checked)} type="checkbox" /><span>Customer is reserving this with a downpayment (for Hold Sale)</span></label>
+            {hasDownpayment && (
+              <label className="field"><span>Downpayment amount</span><input min="0" onChange={(event) => setDownpaymentAmount(event.target.value)} placeholder="0.00" step="0.01" type="number" value={downpaymentAmount} /></label>
+            )}
           </div>
           {saleError && <div className="error-banner">{saleError}</div>}
           {saleMessage && <div className="success-banner"><span>✓</span><p>{saleMessage}</p></div>}

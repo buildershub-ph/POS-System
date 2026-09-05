@@ -18,14 +18,22 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" });
 }
 
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function Transactions() {
   const { user } = useCurrentUser();
-  const { products } = useInventory();
+  const { products, refetch } = useInventory();
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [balancePaidDate, setBalancePaidDate] = useState(today());
   const canCancel = can(user.role, "transferStock");
+  const canProcessSale = can(user.role, "processSale");
 
   const load = useCallback(() => {
     fetch("/api/sales", { cache: "no-store" })
@@ -56,6 +64,27 @@ export function Transactions() {
       setError(reason instanceof Error ? reason.message : "Sale could not be cancelled.");
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function completeSale(sale: SaleRecord) {
+    setPayingId(sale.id);
+    setError("");
+    try {
+      const response = await fetch(`/api/sales/${sale.id}/complete`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ balancePaidAt: `${balancePaidDate}T00:00:00` }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Sale could not be completed.");
+      setCompletingId(null);
+      load();
+      refetch();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Sale could not be completed.");
+    } finally {
+      setPayingId(null);
     }
   }
 
@@ -100,6 +129,13 @@ export function Transactions() {
                   <p><strong>{formatPeso(sale.totalAmount)}</strong>{sale.totalAmount < sale.totalSrp && <small> (SRP {formatPeso(sale.totalSrp)})</small>}</p>
                 </div>
               </div>
+              {sale.downpaymentAmount > 0 && (
+                <div className="transaction-card__reservation">
+                  <span>Downpayment: <strong>{formatPeso(sale.downpaymentAmount)}</strong></span>
+                  <span>Balance due: <strong>{formatPeso(sale.balanceDue)}</strong></span>
+                  {sale.balancePaidAt && <span>Balance paid: <strong>{new Date(sale.balancePaidAt).toLocaleDateString("en-PH")}</strong></span>}
+                </div>
+              )}
               {sale.notes && <p className="transaction-card__note">{sale.notes}</p>}
               {sale.status === "completed" && canCancel && (
                 <div className="transaction-card__actions">
@@ -108,11 +144,27 @@ export function Transactions() {
                   </button>
                 </div>
               )}
-              {(sale.status === "held" || sale.status === "quotation") && canCancel && (
+              {(sale.status === "held" || sale.status === "quotation") && (
                 <div className="transaction-card__actions">
-                  <button className="button button--secondary button--small" disabled={cancellingId === sale.id} onClick={() => cancelSale(sale)} type="button">
-                    {cancellingId === sale.id ? "Cancelling…" : "Cancel"}
-                  </button>
+                  {canProcessSale && completingId !== sale.id && (
+                    <button className="button button--primary button--small" onClick={() => { setCompletingId(sale.id); setBalancePaidDate(today()); }} type="button">
+                      {sale.status === "held" ? "Customer picked up — complete sale" : "Convert to completed sale"}
+                    </button>
+                  )}
+                  {canCancel && (
+                    <button className="button button--secondary button--small" disabled={cancellingId === sale.id} onClick={() => cancelSale(sale)} type="button">
+                      {cancellingId === sale.id ? "Cancelling…" : "Cancel"}
+                    </button>
+                  )}
+                </div>
+              )}
+              {completingId === sale.id && (
+                <div className="transaction-card__complete-form">
+                  <label className="field"><span>Balance paid on</span><input onChange={(event) => setBalancePaidDate(event.target.value)} type="date" value={balancePaidDate} /></label>
+                  <div className="transaction-card__complete-form__actions">
+                    <button className="button button--secondary button--small" onClick={() => setCompletingId(null)} type="button">Cancel</button>
+                    <button className="button button--primary button--small" disabled={payingId === sale.id} onClick={() => completeSale(sale)} type="button">{payingId === sale.id ? "Completing…" : "Confirm & deduct stock"}</button>
+                  </div>
                 </div>
               )}
             </article>

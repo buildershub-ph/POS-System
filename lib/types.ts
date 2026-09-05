@@ -138,7 +138,16 @@ export type CreateSaleInput = {
   customerContactNumber?: string;
   paymentMethod?: PaymentMethod;
   notes?: string;
+  /** Only meaningful for a held sale (reservation) -- how much was paid up front. */
+  downpaymentAmount?: number;
   lines: SaleLineInput[];
+};
+
+/** Completes a previously held sale or quotation -- posts the inventory
+ * transaction at this point and records when the remaining balance was paid. */
+export type CompleteSaleInput = {
+  balancePaidAt?: string;
+  downpaymentAmount?: number;
 };
 
 export type SaleLineRecord = {
@@ -166,5 +175,8 @@ export type SaleRecord = {
   totalAmount: number;
   totalSrp: number;
   lineCount: number;
+  downpaymentAmount: number;
+  balanceDue: number;
+  balancePaidAt?: string;
   lines: SaleLineRecord[];
 };

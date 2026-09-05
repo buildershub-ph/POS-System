@@ -18,6 +18,9 @@ type SalesOverviewRow = {
   total_amount: number | string;
   total_srp: number | string;
   line_count: number | string;
+  downpayment_amount: number | string;
+  balance_paid_at: string | null;
+  balance_due: number | string;
   line_items: Array<{
     variantId: string | null;
     customItemName: string | null;
@@ -50,6 +53,9 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
     totalAmount: number(row.total_amount),
     totalSrp: number(row.total_srp),
     lineCount: number(row.line_count),
+    downpaymentAmount: number(row.downpayment_amount),
+    balanceDue: number(row.balance_due),
+    balancePaidAt: row.balance_paid_at ?? undefined,
     lines: (row.line_items ?? []).map((line) => ({
       variantId: line.variantId ?? undefined,
       customItemName: line.customItemName ?? undefined,
