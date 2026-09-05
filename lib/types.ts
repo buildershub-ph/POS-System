@@ -160,6 +160,10 @@ export type SaleLineRecord = {
   originalSrp: number;
   actualSellingPrice: number;
   discountReason?: string;
+  /** Denormalised from the catalogue at read time, so the Transactions page
+   * can show a full order breakdown without a second lookup. */
+  productName?: string;
+  sku?: string;
 };
 
 export type SaleRecord = {
@@ -181,4 +185,22 @@ export type SaleRecord = {
   balancePaidAt?: string;
   balancePaymentMethod?: PaymentMethod;
   lines: SaleLineRecord[];
+  /** Who made and settled this sale -- shown on the Transactions page. */
+  createdByName?: string;
+  completedByName?: string;
+  cancelledByName?: string;
+  cancelledAt?: string;
+};
+
+// One entry in a sale's edit/action history -- who did what, and when.
+export type SaleHistoryAction = "created_held" | "created_quotation" | "created_completed" | "completed" | "cancelled";
+
+export type SaleHistoryEntry = {
+  id: string;
+  saleId: string;
+  action: SaleHistoryAction;
+  actorId?: string;
+  actorName?: string;
+  note?: string;
+  createdAt: string;
 };

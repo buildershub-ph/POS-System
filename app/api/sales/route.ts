@@ -22,6 +22,11 @@ type SalesOverviewRow = {
   balance_paid_at: string | null;
   balance_due: number | string;
   balance_payment_method: PaymentMethod | null;
+  created_by_name: string | null;
+  completed_by_name: string | null;
+  cancelled_by: string | null;
+  cancelled_at: string | null;
+  cancelled_by_name: string | null;
   line_items: Array<{
     variantId: string | null;
     customItemName: string | null;
@@ -31,6 +36,8 @@ type SalesOverviewRow = {
     originalSrp: number | string;
     actualSellingPrice: number | string;
     discountReason: string | null;
+    productName: string | null;
+    sku: string | null;
   }>;
 };
 
@@ -58,6 +65,10 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
     balanceDue: number(row.balance_due),
     balancePaidAt: row.balance_paid_at ?? undefined,
     balancePaymentMethod: row.balance_payment_method ?? undefined,
+    createdByName: row.created_by_name ?? undefined,
+    completedByName: row.completed_by_name ?? undefined,
+    cancelledByName: row.cancelled_by_name ?? undefined,
+    cancelledAt: row.cancelled_at ?? undefined,
     lines: (row.line_items ?? []).map((line) => ({
       variantId: line.variantId ?? undefined,
       customItemName: line.customItemName ?? undefined,
@@ -67,6 +78,8 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
       originalSrp: number(line.originalSrp),
       actualSellingPrice: number(line.actualSellingPrice),
       discountReason: line.discountReason ?? undefined,
+      productName: line.productName ?? undefined,
+      sku: line.sku ?? undefined,
     })),
   };
 }
