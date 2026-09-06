@@ -139,7 +139,7 @@ export type SaleLineInput = {
    * sold -- captured here rather than derived later, since stock levels and
    * availability change over time. */
   isPreorder?: boolean;
-  /** Required for a non-jamb Filhome Builders door (enforced server-side too). */
+  /** Required for a Steelyes door (enforced server-side too). */
   doorSwing?: DoorSwing;
 };
 

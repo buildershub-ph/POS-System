@@ -34,10 +34,10 @@ function isPreorder(product: ProductVariant) {
   return product.availability === "display_only" || product.available <= 0;
 }
 
-// Every Filhome Builders door needs a left/right swing choice, except the
-// jamb itself (there's nothing to swing).
+// Only a Steelyes door needs a left/right swing choice (not JBosch, and not
+// the jamb-only items).
 function needsDoorSwing(product: ProductVariant) {
-  return product.supplierName === "Filhome Builders" && product.category !== "Door Jamb";
+  return product.brand === "Steelyes";
 }
 
 function initials(name?: string) {
