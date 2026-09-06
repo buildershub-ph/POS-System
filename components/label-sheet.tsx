@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { code128Modules } from "@/lib/code128";
+import { formatPeso } from "@/lib/mock-data";
 import { useInventory } from "@/lib/use-inventory";
 
 // Renders a Code 128 barcode as a vector <svg> so it stays crisp at the
@@ -81,7 +82,7 @@ export function LabelSheet() {
         {filteredProducts.map((product) => (
           <label className={`label-pick ${selected.has(product.id) ? "is-selected" : ""}`} key={product.id}>
             <input checked={selected.has(product.id)} onChange={() => toggle(product.id)} type="checkbox" />
-            <span><strong>{product.productName}</strong><small>{product.sku} · {product.barcode}</small></span>
+            <span><strong>{product.productName}</strong><small>{product.sku} · {formatPeso(product.srp)}</small></span>
           </label>
         ))}
       </div>
@@ -93,7 +94,8 @@ export function LabelSheet() {
             <p className="print-label__name">{product.productName}</p>
             <LabelBarcode barcode={product.barcode} />
             <p className="print-label__code">{product.barcode}</p>
-            <p className="print-label__code">{product.sku}</p>
+            {product.sku !== product.barcode && <p className="print-label__code print-label__code--sku">SKU: {product.sku}</p>}
+            <p className="print-label__price">{formatPeso(product.srp)}</p>
           </div>
         ))}
       </div>
