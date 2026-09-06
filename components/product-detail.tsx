@@ -5,29 +5,74 @@ import { useMemo, useState } from "react";
 import { formatPeso } from "@/lib/mock-data";
 import { useInventory } from "@/lib/use-inventory";
 import { useOwnerMargins } from "@/lib/use-owner-margins";
+import { can } from "@/lib/permissions";
+import { useCurrentUser } from "@/lib/use-current-user";
 import { ProductArtwork } from "./product-artwork";
 import { StockBadge } from "./stock-badge";
 import { BarcodeLabel } from "./barcode-label";
 
 export function ProductDetail({ slug }: { slug: string }) {
-  const { products } = useInventory();
+  const { products, refetch } = useInventory();
+  const { user } = useCurrentUser();
   const { margins, isOwner } = useOwnerMargins();
   const variants = useMemo(() => products.filter((product) => product.productSlug === slug), [products, slug]);
   const [selectedId, setSelectedId] = useState(variants[0]?.id ?? "");
   const effectiveSelectedId = variants.some((variant) => variant.id === selectedId) ? selectedId : variants[0]?.id ?? "";
   const product = variants.find((item) => item.id === effectiveSelectedId);
+  const [photoPreview, setPhotoPreview] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const canUploadPhoto = can(user.role, "manageProducts") || user.role === "stock_employee";
 
   if (!product) {
     return <div className="empty-state"><h2>Product not found</h2><Link className="button button--primary" href="/inventory">Back to inventory</Link></div>;
   }
 
   const margin = margins[product.id];
+  const hasStoredPhoto = product.photo.startsWith("/api/inventory/photos/");
+
+  async function uploadPhoto(file: File | null) {
+    if (!file || !product) return;
+    setPhotoError("");
+    const objectUrl = URL.createObjectURL(file);
+    setPhotoPreview(objectUrl);
+    setUploadingPhoto(true);
+    try {
+      const photoData = new FormData();
+      photoData.append("file", file);
+      const photoResponse = await fetch("/api/inventory/photos", { method: "POST", body: photoData });
+      const photoResult = await photoResponse.json();
+      if (!photoResponse.ok) throw new Error(photoResult.error ?? "Photograph could not be uploaded.");
+
+      const saveResponse = await fetch(`/api/inventory/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ photoPath: photoResult.data.path }),
+      });
+      const saveResult = await saveResponse.json();
+      if (!saveResponse.ok) throw new Error(saveResult.error ?? "Photograph could not be saved.");
+      refetch();
+    } catch (reason) {
+      setPhotoError(reason instanceof Error ? reason.message : "Photograph could not be uploaded.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
 
   return (
     <div className="detail-layout">
       <section className="detail-photo-card">
-        <ProductArtwork alt={product.photoAlt} kind={product.photo} large />
+        <ProductArtwork alt={product.photoAlt} kind={photoPreview || product.photo} large />
         <div className="photo-thumbnails"><button className="is-active" aria-label="Main product photo" /><button aria-label="Box label photo placeholder">BOX LABEL</button></div>
+        {canUploadPhoto && (
+          <div className="detail-photo-upload">
+            <label className="button button--secondary button--small file-upload-button">
+              {uploadingPhoto ? "Uploading…" : hasStoredPhoto ? "Replace photo" : "Upload actual item photo"}
+              <input accept="image/jpeg,image/png,image/webp" aria-label="Upload actual item photograph" capture="environment" disabled={uploadingPhoto} onChange={(event) => uploadPhoto(event.target.files?.[0] ?? null)} type="file" />
+            </label>
+            {photoError && <small className="inline-error">{photoError}</small>}
+          </div>
+        )}
       </section>
 
       <section className="detail-info">
