@@ -81,7 +81,6 @@ export function InventoryCatalogue() {
               <h3>{product.productName}</h3>
               <p>{product.color ?? product.model} · {product.size ?? product.model}</p>
               <small>SKU: {product.sku}</small>
-              {product.supplierSku && <small>Supplier SKU: {product.supplierSku}</small>}
               <div className={`product-card__price ${product.srp == null ? "product-card__price--pending" : ""}`}>{formatPeso(product.srp)} {product.srp != null && <small>/ {product.sellingUnit.replaceAll("_", " ")}</small>}</div>
               <StockBadge compact product={product} />
             </div>

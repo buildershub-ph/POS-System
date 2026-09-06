@@ -66,6 +66,7 @@ export function Transactions() {
   const [exportTo, setExportTo] = useState(today());
   const [statusFilter, setStatusFilter] = useState<"all" | SaleRecord["status"]>("all");
   const [pendingPaymentOnly, setPendingPaymentOnly] = useState(false);
+  const [preorderOnly, setPreorderOnly] = useState(false);
   const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
   const [recordPaymentMethod, setRecordPaymentMethod] = useState<PaymentMethod>("cash");
   const [recordPaymentDate, setRecordPaymentDate] = useState(today());
@@ -146,8 +147,11 @@ export function Transactions() {
   }
 
   const filteredSales = useMemo(
-    () => sales.filter((sale) => (statusFilter === "all" || sale.status === statusFilter) && (!pendingPaymentOnly || sale.paymentStatus === "pending")),
-    [sales, statusFilter, pendingPaymentOnly],
+    () => sales.filter((sale) =>
+      (statusFilter === "all" || sale.status === statusFilter)
+      && (!pendingPaymentOnly || sale.paymentStatus === "pending")
+      && (!preorderOnly || sale.hasPreorderItems)),
+    [sales, statusFilter, pendingPaymentOnly, preorderOnly],
   );
 
   function lineLabel(line: SaleRecord["lines"][number]) {
@@ -217,6 +221,10 @@ export function Transactions() {
           <input checked={pendingPaymentOnly} onChange={(event) => setPendingPaymentOnly(event.target.checked)} type="checkbox" />
           <span>Pending payment only</span>
         </label>
+        <label className="checkbox-field checkbox-field--inline">
+          <input checked={preorderOnly} onChange={(event) => setPreorderOnly(event.target.checked)} type="checkbox" />
+          <span>Orders with preorder items</span>
+        </label>
       </div>
       {loading ? (
         <p>Loading transactions…</p>
@@ -236,6 +244,7 @@ export function Transactions() {
                     {sale.status === "completed" && sale.paymentStatus === "pending" && (
                       <span className="transaction-status transaction-status--pending-payment">Payment Pending</span>
                     )}
+                    {sale.hasPreorderItems && <span className="transaction-status transaction-status--preorder">Has Pre-order</span>}
                   </div>
                   <span>{formatDate(sale.createdAt)}</span>
                 </div>
@@ -324,16 +333,17 @@ export function Transactions() {
                       <h4>Order details</h4>
                       <table>
                         <thead>
-                          <tr><th>Item</th><th>SKU</th><th>Qty</th><th>SRP</th><th>Sold at</th><th>Discount reason</th></tr>
+                          <tr><th>Item</th><th>SKU</th><th>Qty</th><th>SRP</th><th>Sold at</th><th>Swing</th><th>Discount reason</th></tr>
                         </thead>
                         <tbody>
                           {sale.lines.map((line, index) => (
                             <tr key={index}>
-                              <td>{lineLabel(line)}</td>
+                              <td>{lineLabel(line)}{line.isPreorder && <span className="line-preorder-tag">Pre-order</span>}</td>
                               <td>{line.sku ?? line.customSku ?? "—"}</td>
                               <td>{line.quantity}</td>
                               <td>{formatPeso(line.originalSrp)}</td>
                               <td>{formatPeso(line.actualSellingPrice)}</td>
+                              <td>{line.doorSwing ? line.doorSwing[0].toUpperCase() + line.doorSwing.slice(1) : "—"}</td>
                               <td>{line.discountReason ?? "—"}</td>
                             </tr>
                           ))}

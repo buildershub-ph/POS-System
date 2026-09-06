@@ -31,6 +31,7 @@ type SalesOverviewRow = {
   paid_at: string | null;
   paid_by_name: string | null;
   customer_id: string | null;
+  has_preorder_items: boolean;
   line_items: Array<{
     variantId: string | null;
     customItemName: string | null;
@@ -42,6 +43,8 @@ type SalesOverviewRow = {
     discountReason: string | null;
     productName: string | null;
     sku: string | null;
+    isPreorder: boolean | null;
+    doorSwing: SaleLineRecord["doorSwing"] | null;
   }>;
 };
 
@@ -77,6 +80,7 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
     paidAt: row.paid_at ?? undefined,
     paidByName: row.paid_by_name ?? undefined,
     customerId: row.customer_id ?? undefined,
+    hasPreorderItems: row.has_preorder_items ?? false,
     lines: (row.line_items ?? []).map((line) => ({
       variantId: line.variantId ?? undefined,
       customItemName: line.customItemName ?? undefined,
@@ -88,6 +92,8 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
       discountReason: line.discountReason ?? undefined,
       productName: line.productName ?? undefined,
       sku: line.sku ?? undefined,
+      isPreorder: line.isPreorder ?? undefined,
+      doorSwing: line.doorSwing ?? undefined,
     })),
   };
 }

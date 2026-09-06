@@ -111,7 +111,7 @@ export function AddProductWizard() {
       </div></section>
 
       <section className="wizard-section"><div className="wizard-section__number">4</div><div><h2>SKU and barcode</h2><p>The barcode is generated once and remains attached to this exact product.</p></div><div className="form-grid wizard-section__fields">
-        <label className="field"><span>Supplier SKU *</span><input required value={supplierSku} onChange={(event) => setSupplierSku(event.target.value)} placeholder="SKU printed on supplier order form" /></label>
+        <label className="field"><span>Item code *</span><input required value={supplierSku} onChange={(event) => setSupplierSku(event.target.value)} placeholder="The code on the box or supplier order form -- becomes our SKU" /></label>
         <label className="field"><span>Our own SKU *</span><div className="field-combo"><input required value={sku} onChange={(event) => setSku(event.target.value.toUpperCase())} placeholder="Your internal SKU" /><button onClick={suggestSku} type="button">Generate</button></div></label>
         <label className="field field--wide"><span>Internal Code 128 barcode</span><div className="field-combo"><input readOnly value={barcode} /><button onClick={() => setBarcode(generateInternalBarcode())} type="button">New code</button></div></label>
         <div className="field--wide"><BarcodeLabel barcode={barcode} sku={sku || "SKU PENDING"} productName={name || "New product"} downloadable /></div>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatPeso, invoiceNumber, paymentMethods } from "@/lib/mock-data";
-import type { CreateSaleInput, PaymentMethod, ProductVariant } from "@/lib/types";
+import type { CreateSaleInput, DoorSwing, PaymentMethod, ProductVariant } from "@/lib/types";
 import { useBarcodeCamera } from "@/lib/use-barcode-camera";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useInventory } from "@/lib/use-inventory";
@@ -14,6 +14,7 @@ type CartLine = {
   product: ProductVariant;
   quantity: number;
   actualPrice: number;
+  doorSwing?: DoorSwing;
 };
 
 // A custom item is a customer order for something not in the catalogue at
@@ -31,6 +32,12 @@ type SaleStatusToPost = "held" | "quotation" | "completed";
 
 function isPreorder(product: ProductVariant) {
   return product.availability === "display_only" || product.available <= 0;
+}
+
+// Every Filhome Builders door needs a left/right swing choice, except the
+// jamb itself (there's nothing to swing).
+function needsDoorSwing(product: ProductVariant) {
+  return product.supplierName === "Filhome Builders" && product.category !== "Door Jamb";
 }
 
 function initials(name?: string) {
@@ -129,7 +136,7 @@ export function CashierMode() {
     setScanCode("");
   }
 
-  function updateLine(id: string, change: Partial<Pick<CartLine, "quantity" | "actualPrice">>) {
+  function updateLine(id: string, change: Partial<Pick<CartLine, "quantity" | "actualPrice" | "doorSwing">>) {
     setCart((current) => current.map((line) => line.product.id === id ? { ...line, ...change } : line));
   }
 
@@ -167,6 +174,11 @@ export function CashierMode() {
       setSaleError(`${missingLocation.product.productName} has no storage location on record — it can't be sold until that's fixed.`);
       return;
     }
+    const missingSwing = cart.find((line) => needsDoorSwing(line.product) && !line.doorSwing);
+    if (missingSwing) {
+      setSaleError(`Select left or right swing for ${missingSwing.product.productName} before continuing.`);
+      return;
+    }
     setSaving(status);
     setSaleError("");
     setSaleMessage("");
@@ -188,6 +200,8 @@ export function CashierMode() {
             originalSrp: line.product.srp ?? line.actualPrice,
             actualSellingPrice: line.actualPrice,
             discountReason: line.actualPrice < (line.product.srp ?? 0) ? discountReason : undefined,
+            isPreorder: isPreorder(line.product),
+            doorSwing: line.doorSwing,
           })),
           ...customLines.map((line) => ({
             customItemName: line.name,
@@ -312,7 +326,26 @@ export function CashierMode() {
             {cart.map((line, index) => (
               <div className="cart-line" key={line.product.id}>
                 <span className="cart-index">{index + 1}</span><ProductArtwork alt={line.product.photoAlt} kind={line.product.photo} />
-                <div className="cart-line__name"><strong>{line.product.productName}</strong><small>{line.product.color ?? line.product.model} · {line.product.size ?? line.product.model}</small><small>SKU: {line.product.sku}</small>{(isPreorder(line.product) || line.quantity > line.product.available) && <small className="preorder-note">Pre-order — order from supplier</small>}</div>
+                <div className="cart-line__name">
+                  <strong>{line.product.productName}</strong>
+                  <small>{line.product.color ?? line.product.model} · {line.product.size ?? line.product.model}</small>
+                  <small>SKU: {line.product.sku}</small>
+                  {(isPreorder(line.product) || line.quantity > line.product.available) && <small className="preorder-note">Pre-order — order from supplier</small>}
+                  {needsDoorSwing(line.product) && (
+                    <label className="door-swing-field">
+                      <span>Swing *</span>
+                      <select
+                        aria-label={`Door swing for ${line.product.productName}`}
+                        onChange={(event) => updateLine(line.product.id, { doorSwing: (event.target.value || undefined) as DoorSwing | undefined })}
+                        value={line.doorSwing ?? ""}
+                      >
+                        <option value="">Select…</option>
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                      </select>
+                    </label>
+                  )}
+                </div>
                 <label><span className="mobile-only">Quantity</span><input min="1" onChange={(event) => updateLine(line.product.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} type="number" value={line.quantity} /><small>{line.product.sellingUnit.replaceAll("_", " ")}</small></label>
                 <span className="cart-line__srp">{formatPeso(line.product.srp)}</span>
                 <label><span className="mobile-only">Actual price</span><input aria-label={`Actual selling price for ${line.product.productName}`} min="0" onChange={(event) => updateLine(line.product.id, { actualPrice: Math.max(0, Number(event.target.value)) })} type="number" value={line.actualPrice} />{line.actualPrice < (line.product.srp ?? 0) && <small className="approval-note">{user.role === "owner" || user.role === "manager" ? "Discount auto-approved" : "Needs owner/manager approval"}</small>}</label>

@@ -32,6 +32,7 @@ type CatalogueRow = {
   delivery_reference: string | null;
   delivery_date: string | null;
   draft_transaction_id: string | null;
+  inclusions: string | null;
 };
 
 function slug(value: string) {
@@ -84,6 +85,7 @@ function toPortalProduct(row: CatalogueRow): ProductVariant {
     photoAlt: `${row.product_name} product photograph`,
     piecesPerBox: row.pieces_per_box == null ? undefined : number(row.pieces_per_box),
     sqmPerBox: row.sqm_per_box == null ? undefined : number(row.sqm_per_box),
+    inclusions: row.inclusions ?? undefined,
   };
 }
 

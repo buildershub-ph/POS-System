@@ -53,6 +53,9 @@ export type ProductVariant = {
   photoAlt: string;
   piecesPerBox?: number;
   sqmPerBox?: number;
+  /** Free text shown on the product page below the SRP -- e.g. what a door
+   * package comes with, or an extra-charge note. Most items won't have one. */
+  inclusions?: string;
 };
 
 export type Supplier = {
@@ -120,6 +123,8 @@ export type PaymentMethod = "cash" | "gcash" | "maya" | "bank_transfer" | "card"
 // A sale line is either a catalog product (variantId + locationId, deducts
 // stock) or a custom/one-off item not in the system at all (customItemName,
 // no stock impact — just a record of what was sold).
+export type DoorSwing = "left" | "right";
+
 export type SaleLineInput = {
   variantId?: string;
   locationId?: string;
@@ -130,6 +135,12 @@ export type SaleLineInput = {
   originalSrp: number;
   actualSellingPrice: number;
   discountReason?: string;
+  /** True if the item was 0 in stock or display-only at the moment it was
+   * sold -- captured here rather than derived later, since stock levels and
+   * availability change over time. */
+  isPreorder?: boolean;
+  /** Required for a non-jamb Filhome Builders door (enforced server-side too). */
+  doorSwing?: DoorSwing;
 };
 
 export type CreateSaleInput = {
@@ -174,6 +185,8 @@ export type SaleLineRecord = {
    * can show a full order breakdown without a second lookup. */
   productName?: string;
   sku?: string;
+  isPreorder?: boolean;
+  doorSwing?: DoorSwing;
 };
 
 export type SaleRecord = {
@@ -206,6 +219,8 @@ export type SaleRecord = {
   paidAt?: string;
   paidByName?: string;
   customerId?: string;
+  /** True if any line in this sale was a pre-order at sale time. */
+  hasPreorderItems: boolean;
 };
 
 export type CustomerSummary = {

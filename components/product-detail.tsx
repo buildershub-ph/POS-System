@@ -85,6 +85,7 @@ export function ProductDetail({ slug }: { slug: string }) {
           <strong>{formatPeso(product.srp)}</strong>
           {product.srp != null ? <small>per {product.sellingUnit.replaceAll("_", " ")}</small> : <small>Owner pricing setup required</small>}
         </div>
+        {product.inclusions && <div className="inclusions-block"><span>Inclusions</span><p>{product.inclusions}</p></div>}
 
         {variants.length > 1 && (
           <label className="field"><span>Exact variant</span><select value={effectiveSelectedId} onChange={(event) => setSelectedId(event.target.value)}>
@@ -92,7 +93,7 @@ export function ProductDetail({ slug }: { slug: string }) {
           </select></label>
         )}
 
-        <div className="identity-grid"><div><span>Our SKU</span><strong>{product.sku}</strong></div><div><span>Supplier SKU</span><strong>{product.supplierSku ?? "Not recorded"}</strong></div><div><span>Supplier</span><strong>{product.supplierName ?? "Not recorded"}</strong></div></div>
+        <div className="identity-grid"><div><span>Our SKU</span><strong>{product.sku}</strong></div><div><span>Supplier</span><strong>{product.supplierName ?? "Not recorded"}</strong></div></div>
 
         <div className="specification-card"><h3>Specifications</h3>{Object.entries(product.attributes).map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
         <div className="location-card"><span>⌖</span><div><small>Current stock location</small><strong>{product.location}{product.locationCompany && product.locationCompany !== "Builders Hub" ? ` (${product.locationCompany})` : ""}</strong></div></div>
@@ -104,7 +105,7 @@ export function ProductDetail({ slug }: { slug: string }) {
             <div><span>Gross margin at SRP</span><strong>{formatPeso(margin.grossMarginAmount)} {product.srp ? `(${((margin.grossMarginAmount / product.srp) * 100).toFixed(1)}%)` : ""}</strong></div>
           </div>
         )}
-        <div className="detail-actions"><Link className="button button--secondary" href="/receive">Review draft receipt</Link>{product.srp != null && product.available > 0 ? <Link className="button button--primary" href={`/cashier?variant=${product.id}`}>Add to sale</Link> : <button className="button button--primary" disabled type="button">Not ready for sale</button>}</div>
+        <div className="detail-actions"><Link className="button button--secondary" href="/receive">Review draft receipt</Link>{product.srp != null ? <Link className="button button--primary" href={`/cashier?variant=${product.id}`}>Add to sale</Link> : <button className="button button--primary" disabled type="button">Not ready for sale</button>}</div>
 
         <BarcodeLabel barcode={product.barcode} sku={product.sku} productName={product.productName} downloadable />
       </section>
