@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatPeso, invoiceNumber, paymentMethods } from "@/lib/mock-data";
+import { can } from "@/lib/permissions";
 import type { CreateSaleInput, DoorSwing, PaymentMethod, ProductVariant } from "@/lib/types";
 import { useBarcodeCamera } from "@/lib/use-barcode-camera";
 import { useCurrentUser } from "@/lib/use-current-user";
@@ -46,6 +47,10 @@ function initials(name?: string) {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function CashierMode() {
   const { user } = useCurrentUser();
   const { categories, products, refetch, error: inventoryError } = useInventory();
@@ -71,9 +76,12 @@ export function CashierMode() {
   const [hasDownpayment, setHasDownpayment] = useState(false);
   const [downpaymentAmount, setDownpaymentAmount] = useState("");
   const [payLater, setPayLater] = useState(false);
+  const [hasBackdate, setHasBackdate] = useState(false);
+  const [backdateDate, setBackdateDate] = useState(today());
   const [saving, setSaving] = useState<SaleStatusToPost | null>(null);
   const [saleError, setSaleError] = useState("");
   const [saleMessage, setSaleMessage] = useState("");
+  const canBackdate = can(user.role, "backdateSale");
 
   const itemCount = cart.length + customLines.length;
 
@@ -179,6 +187,10 @@ export function CashierMode() {
       setSaleError(`Select left or right swing for ${missingSwing.product.productName} before continuing.`);
       return;
     }
+    if (canBackdate && hasBackdate && backdateDate > today()) {
+      setSaleError("The sale date can't be in the future.");
+      return;
+    }
     setSaving(status);
     setSaleError("");
     setSaleMessage("");
@@ -191,6 +203,7 @@ export function CashierMode() {
         notes: notes || undefined,
         downpaymentAmount: hasDownpayment ? Math.max(0, Number(downpaymentAmount) || 0) : undefined,
         payLater: status === "completed" && payLater,
+        saleDate: canBackdate && hasBackdate ? `${backdateDate}T00:00:00` : undefined,
         lines: [
           ...cart.map((line) => ({
             variantId: line.product.id,
@@ -225,7 +238,10 @@ export function CashierMode() {
       const paymentNote = status === "completed" && payLater
         ? " Payment is pending — record it later in Transactions."
         : status === "completed" ? " Stock updated." : "";
-      setSaleMessage(`${label} ${invoiceNumber(result.data.saleNumber)} saved.${paymentNote}`);
+      const backdateNote = canBackdate && hasBackdate
+        ? ` Dated ${new Date(`${backdateDate}T00:00:00`).toLocaleDateString("en-PH", { dateStyle: "medium" })}.`
+        : "";
+      setSaleMessage(`${label} ${invoiceNumber(result.data.saleNumber)} saved.${paymentNote}${backdateNote}`);
       setCart([]);
       setCustomLines([]);
       setCustomerName("");
@@ -235,6 +251,8 @@ export function CashierMode() {
       setHasDownpayment(false);
       setDownpaymentAmount("");
       setPayLater(false);
+      setHasBackdate(false);
+      setBackdateDate(today());
       if (status === "completed") refetch();
     } catch (reason) {
       setSaleError(reason instanceof Error ? reason.message : "Sale could not be posted.");
@@ -322,6 +340,14 @@ export function CashierMode() {
             <label className="field"><span>Customer full name *</span><input aria-label="Customer full name" onChange={(event) => setCustomerName(event.target.value)} placeholder="e.g. Ana Cruz" value={customerName} /></label>
             <label className="field"><span>Contact number</span><input aria-label="Customer contact number" onChange={(event) => setCustomerContact(event.target.value)} placeholder="Optional" type="tel" value={customerContact} /></label>
           </div>
+          {canBackdate && (
+            <div className="downpayment-field">
+              <label className="checkbox-field"><input checked={hasBackdate} onChange={(event) => setHasBackdate(event.target.checked)} type="checkbox" /><span>This sale actually happened on an earlier date (I forgot to enter it)</span></label>
+              {hasBackdate && (
+                <label className="field"><span>Sale date</span><input max={today()} onChange={(event) => setBackdateDate(event.target.value)} type="date" value={backdateDate} /></label>
+              )}
+            </div>
+          )}
           <div className="cart-table"><div className="cart-table__header"><span>Item</span><span>Qty</span><span>SRP</span><span>Actual price</span><span>Total</span></div>
             {cart.map((line, index) => (
               <div className="cart-line" key={line.product.id}>

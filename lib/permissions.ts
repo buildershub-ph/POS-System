@@ -18,7 +18,8 @@ export type Permission =
   | "manageProducts"
   | "manageUsers"
   | "viewAuditLog"
-  | "viewPrivateCosts";
+  | "viewPrivateCosts"
+  | "backdateSale";
 
 const permissions: Record<Permission, UserRole[]> = {
   viewCatalogue: ["owner", "manager", "sales_employee", "stock_employee", "cashier"],
@@ -31,6 +32,10 @@ const permissions: Record<Permission, UserRole[]> = {
   manageUsers: ["owner"],
   viewAuditLog: ["owner"],
   viewPrivateCosts: ["owner"],
+  // Recording a sale under a date other than today is a bookkeeping
+  // correction (a forgotten walk-in sale, entered the next day) -- limited
+  // to owner/manager since it changes when a sale appears to have happened.
+  backdateSale: ["owner", "manager"],
 };
 
 export function can(role: UserRole, permission: Permission): boolean {

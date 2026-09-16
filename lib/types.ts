@@ -155,6 +155,10 @@ export type CreateSaleInput = {
    * payment hasn't been collected yet (different from a held reservation,
    * where the item never left the store). */
   payLater?: boolean;
+  /** Backdates the sale to this timestamp instead of now -- for a walk-in
+   * sale that was forgotten and only entered the next day. Owner/manager
+   * only; ignored server-side for any other role. */
+  saleDate?: string;
   lines: SaleLineInput[];
 };
 
