@@ -134,8 +134,8 @@ export async function POST(request: NextRequest) {
   if (!body.lines?.length) return NextResponse.json({ error: "A sale needs at least one item." }, { status: 400 });
   const invalidLine = body.lines.find((line) => !line.variantId && !line.customItemName?.trim());
   if (invalidLine) return NextResponse.json({ error: "Every line needs either a catalogue product or a custom item name." }, { status: 400 });
-  // Backdating is owner/manager only -- drop it here too, not just in the
-  // database function, so a crafted request from any other role is a no-op.
+  // Backdating is open to anyone who can process a sale -- drop it here too,
+  // not just in the database function, in case a request is crafted by hand.
   if (body.saleDate && !can(user.role ?? "cashier", "backdateSale")) delete body.saleDate;
 
   const response = await supabaseRest(request, "rpc/create_sale", {

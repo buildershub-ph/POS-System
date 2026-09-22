@@ -33,9 +33,9 @@ const permissions: Record<Permission, UserRole[]> = {
   viewAuditLog: ["owner"],
   viewPrivateCosts: ["owner"],
   // Recording a sale under a date other than today is a bookkeeping
-  // correction (a forgotten walk-in sale, entered the next day) -- limited
-  // to owner/manager since it changes when a sale appears to have happened.
-  backdateSale: ["owner", "manager"],
+  // correction (a forgotten walk-in sale, entered the next day) -- open to
+  // anyone who can process a sale in the first place.
+  backdateSale: ["owner", "manager", "sales_employee", "cashier"],
 };
 
 export function can(role: UserRole, permission: Permission): boolean {
