@@ -268,6 +268,20 @@ export function Transactions() {
                   <div>
                     <small>Total</small>
                     <p><strong>{formatPeso(sale.totalAmount)}</strong>{sale.totalAmount < sale.totalSrp && <small> (SRP {formatPeso(sale.totalSrp)})</small>}</p>
+                    {sale.totalDiscountAmount > 0 && (
+                      <p>
+                        Total discount: <strong>-{formatPeso(sale.totalDiscountAmount)}</strong> → Net {formatPeso(sale.netTotalAmount)}
+                        {sale.totalDiscountReason && <small> ({sale.totalDiscountReason})</small>}
+                        {" "}
+                        <small className="approval-note">
+                          {sale.totalDiscountApprovedByName
+                            ? `Approved by ${sale.totalDiscountApprovedByName}`
+                            : sale.totalDiscountApprovalRequired
+                              ? "Needs owner/manager approval"
+                              : ""}
+                        </small>
+                      </p>
+                    )}
                   </div>
                 </div>
                 {sale.downpaymentAmount > 0 && (

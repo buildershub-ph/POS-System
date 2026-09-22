@@ -159,6 +159,10 @@ export type CreateSaleInput = {
    * sale that was forgotten and only entered the next day. Owner/manager
    * only; ignored server-side for any other role. */
   saleDate?: string;
+  /** A peso amount knocked off the whole sale's total, separate from any
+   * per-line price override. Capped server-side to the sum of the lines. */
+  totalDiscountAmount?: number;
+  totalDiscountReason?: string;
   lines: SaleLineInput[];
 };
 
@@ -225,6 +229,15 @@ export type SaleRecord = {
   customerId?: string;
   /** True if any line in this sale was a pre-order at sale time. */
   hasPreorderItems: boolean;
+  /** A peso amount knocked off the whole sale's total (on top of any
+   * per-line discount already baked into totalAmount). */
+  totalDiscountAmount: number;
+  totalDiscountReason?: string;
+  totalDiscountApprovalRequired: boolean;
+  totalDiscountApprovedByName?: string;
+  totalDiscountApprovedAt?: string;
+  /** totalAmount minus totalDiscountAmount -- what the sale actually nets. */
+  netTotalAmount: number;
 };
 
 export type CustomerSummary = {

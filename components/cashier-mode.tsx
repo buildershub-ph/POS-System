@@ -78,6 +78,9 @@ export function CashierMode() {
   const [payLater, setPayLater] = useState(false);
   const [hasBackdate, setHasBackdate] = useState(false);
   const [backdateDate, setBackdateDate] = useState(today());
+  const [hasTotalDiscount, setHasTotalDiscount] = useState(false);
+  const [totalDiscountAmount, setTotalDiscountAmount] = useState("");
+  const [totalDiscountReason, setTotalDiscountReason] = useState("");
   const [saving, setSaving] = useState<SaleStatusToPost | null>(null);
   const [saleError, setSaleError] = useState("");
   const [saleMessage, setSaleMessage] = useState("");
@@ -104,6 +107,11 @@ export function CashierMode() {
   }, [cart, customLines]);
 
   const hasDiscount = cart.some((line) => line.actualPrice < (line.product.srp ?? 0));
+
+  // Clamped so the total discount can never exceed the pre-discount total --
+  // the server enforces the same cap.
+  const totalDiscountValue = hasTotalDiscount ? Math.min(Math.max(0, Number(totalDiscountAmount) || 0), totals.total) : 0;
+  const netTotal = totals.total - totalDiscountValue;
 
   function addProduct(product: ProductVariant) {
     const actualPrice = product.srp;
@@ -204,6 +212,8 @@ export function CashierMode() {
         downpaymentAmount: hasDownpayment ? Math.max(0, Number(downpaymentAmount) || 0) : undefined,
         payLater: status === "completed" && payLater,
         saleDate: canBackdate && hasBackdate ? `${backdateDate}T00:00:00` : undefined,
+        totalDiscountAmount: totalDiscountValue > 0 ? totalDiscountValue : undefined,
+        totalDiscountReason: totalDiscountValue > 0 ? (totalDiscountReason.trim() || undefined) : undefined,
         lines: [
           ...cart.map((line) => ({
             variantId: line.product.id,
@@ -253,6 +263,9 @@ export function CashierMode() {
       setPayLater(false);
       setHasBackdate(false);
       setBackdateDate(today());
+      setHasTotalDiscount(false);
+      setTotalDiscountAmount("");
+      setTotalDiscountReason("");
       if (status === "completed") refetch();
     } catch (reason) {
       setSaleError(reason instanceof Error ? reason.message : "Sale could not be posted.");
@@ -400,7 +413,17 @@ export function CashierMode() {
               {!payLater && <label className="field"><span>Payment method</span><select onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)} value={paymentMethod}>{paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select></label>}
               {hasDiscount && <label className="field"><span>Discount reason</span><select onChange={(event) => setDiscountReason(event.target.value)} value={discountReason}><option>Customer negotiation</option><option>Contractor pricing</option><option>Promotional discount</option><option>Damaged packaging</option></select></label>}
             </div>
-            <div className="cart-totals"><div><span>Subtotal at SRP</span><strong>{formatPeso(totals.srp)}</strong></div><div><span>Discount</span><strong>-{formatPeso(totals.discount)}</strong></div><div><span>Total</span><strong>{formatPeso(totals.total)}</strong></div></div>
+            <div className="cart-totals"><div><span>Subtotal at SRP</span><strong>{formatPeso(totals.srp)}</strong></div><div><span>Discount</span><strong>-{formatPeso(totals.discount)}</strong></div>{totalDiscountValue > 0 && <div><span>Total discount</span><strong>-{formatPeso(totalDiscountValue)}</strong></div>}<div><span>Total</span><strong>{formatPeso(netTotal)}</strong></div></div>
+          </div>
+          <div className="downpayment-field">
+            <label className="checkbox-field"><input checked={hasTotalDiscount} onChange={(event) => setHasTotalDiscount(event.target.checked)} type="checkbox" /><span>Apply a discount to the whole sale total (not per item)</span></label>
+            {hasTotalDiscount && (
+              <>
+                <label className="field"><span>Discount amount</span><input aria-label="Total discount amount" max={totals.total} min="0" onChange={(event) => setTotalDiscountAmount(event.target.value)} placeholder="0.00" step="0.01" type="number" value={totalDiscountAmount} /></label>
+                <label className="field"><span>Reason (optional)</span><input aria-label="Total discount reason" onChange={(event) => setTotalDiscountReason(event.target.value)} placeholder="e.g. Loyal customer, bulk order" value={totalDiscountReason} /></label>
+                {totalDiscountValue > 0 && <small className="approval-note">{user.role === "owner" || user.role === "manager" ? "Discount auto-approved" : "Needs owner/manager approval"}</small>}
+              </>
+            )}
           </div>
           <div className="downpayment-field">
             <label className="checkbox-field"><input checked={payLater} onChange={(event) => setPayLater(event.target.checked)} type="checkbox" /><span>Releasing the item now, customer will pay later (no payment collected yet)</span></label>
@@ -421,7 +444,7 @@ export function CashierMode() {
         </section>
       </main>
 
-      <button className="mobile-cart-summary" onClick={() => setMobileTab("cart")}><span>{itemCount} item types</span><strong>{formatPeso(totals.total)}</strong><span>View cart ›</span></button>
+      <button className="mobile-cart-summary" onClick={() => setMobileTab("cart")}><span>{itemCount} item types</span><strong>{formatPeso(netTotal)}</strong><span>View cart ›</span></button>
     </div>
   );
 }

@@ -32,6 +32,12 @@ type SalesOverviewRow = {
   paid_by_name: string | null;
   customer_id: string | null;
   has_preorder_items: boolean;
+  total_discount_amount: number | string;
+  total_discount_reason: string | null;
+  total_discount_approval_required: boolean;
+  total_discount_approved_by_name: string | null;
+  total_discount_approved_at: string | null;
+  net_total_amount: number | string;
   line_items: Array<{
     variantId: string | null;
     customItemName: string | null;
@@ -81,6 +87,12 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
     paidByName: row.paid_by_name ?? undefined,
     customerId: row.customer_id ?? undefined,
     hasPreorderItems: row.has_preorder_items ?? false,
+    totalDiscountAmount: number(row.total_discount_amount),
+    totalDiscountReason: row.total_discount_reason ?? undefined,
+    totalDiscountApprovalRequired: row.total_discount_approval_required ?? false,
+    totalDiscountApprovedByName: row.total_discount_approved_by_name ?? undefined,
+    totalDiscountApprovedAt: row.total_discount_approved_at ?? undefined,
+    netTotalAmount: number(row.net_total_amount),
     lines: (row.line_items ?? []).map((line) => ({
       variantId: line.variantId ?? undefined,
       customItemName: line.customItemName ?? undefined,
