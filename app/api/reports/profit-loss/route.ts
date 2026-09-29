@@ -9,8 +9,10 @@ type SaleRow = {
   sale_number: number;
   created_at: string;
   customer_name: string | null;
-  payment_status: "paid" | "pending" | null;
-  total_discount_amount: number | string | null;
+  // select=* like the other sales routes, so a database that hasn't run
+  // every migration yet still loads -- these two may be absent.
+  payment_status?: "paid" | "pending" | null;
+  total_discount_amount?: number | string | null;
   line_items: Array<{
     variantId: string | null;
     customItemName: string | null;
@@ -34,6 +36,11 @@ function number(value: number | string | null | undefined) {
 
 function csvCell(value: unknown) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+async function supabaseError(response: Response) {
+  const body = (await response.json().catch(() => null)) as { message?: string } | null;
+  return body?.message ?? "";
 }
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
@@ -65,12 +72,16 @@ export async function GET(request: NextRequest) {
   const [salesResponse, costsResponse] = await Promise.all([
     supabaseRest(
       request,
-      `sales_overview?select=id,sale_number,created_at,customer_name,payment_status,total_discount_amount,line_items&status=eq.completed&created_at=gte.${fromIso}&created_at=lt.${toIso}&order=created_at.asc&limit=10000`,
+      `sales_overview?select=*&status=eq.completed&created_at=gte.${fromIso}&created_at=lt.${toIso}&order=created_at.asc&limit=10000`,
     ),
     supabaseRest(request, "variant_private_costs?select=variant_id,unit_cost,landed_cost"),
   ]);
-  if (!salesResponse.ok) return NextResponse.json({ error: "Unable to load sales." }, { status: salesResponse.status });
-  if (!costsResponse.ok) return NextResponse.json({ error: "Unable to load cost data." }, { status: costsResponse.status });
+  if (!salesResponse.ok) {
+    return NextResponse.json({ error: `Unable to load sales. ${await supabaseError(salesResponse)}`.trim() }, { status: salesResponse.status });
+  }
+  if (!costsResponse.ok) {
+    return NextResponse.json({ error: `Unable to load cost data. ${await supabaseError(costsResponse)}`.trim() }, { status: costsResponse.status });
+  }
 
   const saleRows = (await salesResponse.json()) as SaleRow[];
   const costRows = (await costsResponse.json()) as CostRow[];
@@ -83,7 +94,7 @@ export async function GET(request: NextRequest) {
     saleNumber: row.sale_number,
     createdAt: row.created_at,
     customerName: row.customer_name,
-    paymentStatus: row.payment_status,
+    paymentStatus: row.payment_status ?? null,
     totalDiscountAmount: number(row.total_discount_amount),
     lines: (row.line_items ?? []).map((line) => ({
       variantId: line.variantId,
