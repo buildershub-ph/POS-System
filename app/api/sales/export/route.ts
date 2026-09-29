@@ -10,6 +10,7 @@ function csvCell(value: unknown) {
 
 type ExportRow = {
   sale_number: number;
+  sales_order_number?: string | null;
   status: SaleStatus;
   customer_name: string | null;
   customer_contact_number: string | null;
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
   const rows = (await response.json()) as ExportRow[];
 
   const headers = [
-    "Invoice", "Status", "Date", "Customer", "Contact Number", "Items", "Payment Method",
+    "Invoice", "SO Number", "Status", "Date", "Customer", "Contact Number", "Items", "Payment Method",
     "Total Amount", "Total SRP", "Downpayment", "Balance Due", "Balance Paid On", "Balance Payment Method",
     "Sold By", "Completed By", "Cancelled By", "Cancelled At", "Notes",
   ];
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
       .join("; ");
     return [
       invoiceNumber(row.sale_number),
+      row.sales_order_number ?? "",
       row.status,
       row.created_at,
       row.customer_name ?? "",

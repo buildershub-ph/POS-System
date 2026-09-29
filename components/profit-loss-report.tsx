@@ -175,6 +175,7 @@ export function ProfitLossReport() {
                   <span>
                     <strong>{invoiceNumber(sale.saleNumber)}</strong>
                     <small>
+                      {sale.salesOrderNumber && `SO # ${sale.salesOrderNumber} · `}
                       {sale.paymentStatus === "pending" && "Unpaid · "}
                       {sale.discount > 0 && `Discount ${formatPeso(sale.discount)} · `}
                       {sale.hasCustomItems && "Custom items"}

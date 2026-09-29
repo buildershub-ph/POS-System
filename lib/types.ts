@@ -238,6 +238,8 @@ export type SaleRecord = {
   totalDiscountApprovedAt?: string;
   /** totalAmount minus totalDiscountAmount -- what the sale actually nets. */
   netTotalAmount: number;
+  /** The Sales Order number on the store's paper receipt, typed in by hand. */
+  salesOrderNumber?: string;
 };
 
 export type CustomerSummary = {
@@ -251,7 +253,7 @@ export type CustomerSummary = {
 };
 
 // One entry in a sale's edit/action history -- who did what, and when.
-export type SaleHistoryAction = "created_held" | "created_quotation" | "created_completed" | "completed" | "cancelled" | "payment_recorded";
+export type SaleHistoryAction = "created_held" | "created_quotation" | "created_completed" | "completed" | "cancelled" | "payment_recorded" | "sales_order_number_set";
 
 export type SaleHistoryEntry = {
   id: string;

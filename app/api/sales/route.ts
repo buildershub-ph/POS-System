@@ -38,6 +38,7 @@ type SalesOverviewRow = {
   total_discount_approved_by_name: string | null;
   total_discount_approved_at: string | null;
   net_total_amount: number | string;
+  sales_order_number?: string | null;
   line_items: Array<{
     variantId: string | null;
     customItemName: string | null;
@@ -93,6 +94,7 @@ function toSaleRecord(row: SalesOverviewRow): SaleRecord {
     totalDiscountApprovedByName: row.total_discount_approved_by_name ?? undefined,
     totalDiscountApprovedAt: row.total_discount_approved_at ?? undefined,
     netTotalAmount: number(row.net_total_amount),
+    salesOrderNumber: row.sales_order_number ?? undefined,
     lines: (row.line_items ?? []).map((line) => ({
       variantId: line.variantId ?? undefined,
       customItemName: line.customItemName ?? undefined,
