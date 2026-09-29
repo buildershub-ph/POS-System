@@ -247,6 +247,36 @@ button { color: inherit; }
   .customers-table__row { grid-template-columns: 1fr 1fr; }
 }
 
+/* Profit & Loss report */
+.pl-statement { background: #fff; border: 1px solid var(--line); border-radius: 12px; display: grid; gap: 24px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); margin-bottom: 16px; padding: 18px 22px; }
+.pl-statement dl { margin: 0; }
+.pl-statement dl > div { border-top: 1px solid var(--line); display: flex; font-size: 13px; justify-content: space-between; padding: 10px 0; }
+.pl-statement dl > div:first-child { border-top: 0; }
+.pl-statement dt small { color: var(--muted); font-size: 11px; }
+.pl-statement dd { font-variant-numeric: tabular-nums; margin: 0; }
+.pl-statement__subtotal { font-weight: 700; }
+.pl-statement__total { border-top: 2px solid var(--ink)!important; font-size: 16px!important; font-weight: 800; }
+.pl-notes { color: var(--muted); display: grid; font-size: 12px; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.pl-notes strong { color: var(--ink); }
+.pl-positive { color: var(--green); }
+.pl-negative { color: var(--red); }
+.pl-warning { color: var(--amber); font-style: normal; }
+.pl-tabs { margin-bottom: 0; }
+.pl-table { background: #fff; border: 1px solid var(--line); border-radius: 12px; margin-top: 12px; overflow: hidden; }
+.pl-table__header, .pl-table__row { display: grid; gap: 10px; padding: 12px 16px; }
+.pl-table__row--items { grid-template-columns: 2.4fr .6fr 1fr 1fr 1fr 1fr .7fr; }
+.pl-table__row--sales { grid-template-columns: 1.3fr 1fr 1.4fr 1fr 1fr 1fr .7fr; }
+.pl-table__header { background: #f7f7f7; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.pl-table__row { border-top: 1px solid var(--line); font-size: 12px; font-variant-numeric: tabular-nums; }
+.pl-table__row small { color: var(--muted); display: block; font-size: 10px; margin-top: 2px; }
+.pl-table__footnote { color: var(--muted); font-size: 11px; margin: 0; padding: 10px 16px; border-top: 1px solid var(--line); }
+@media (max-width: 860px) {
+  .pl-statement { grid-template-columns: 1fr; }
+  .pl-table__header { display: none; }
+  .pl-table__row--items, .pl-table__row--sales { grid-template-columns: 1fr 1fr; }
+  .pl-table__row > span:first-child { grid-column: 1 / -1; }
+}
+
 /* Barcode label sheet */
 .label-sheet-tools { align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 12px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; margin-bottom: 16px; padding: 14px 18px; }
 .label-sheet-tools__count { color: var(--muted); font-size: 12px; }
