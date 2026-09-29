@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { can } from "@/lib/permissions";
+import { can, type Permission } from "@/lib/permissions";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 type AppShellProps = {
@@ -14,14 +14,15 @@ type AppShellProps = {
   wide?: boolean;
 };
 
-const navItems = [
+const navItems: Array<{ href: string; label: string; icon: string; permission?: Permission }> = [
   { href: "/", label: "Home", icon: "⌂" },
   { href: "/inventory", label: "Inventory", icon: "▣" },
-  { href: "/receive", label: "Receive Stock", icon: "↧", permission: "receiveStock" as const },
+  { href: "/receive", label: "Receive Stock", icon: "↧", permission: "receiveStock" },
   { href: "/inventory?view=low-stock", label: "Low Stock", icon: "!" },
   { href: "/scan", label: "Scan Product", icon: "⌗" },
   { href: "/transactions", label: "Transactions", icon: "⇄" },
   { href: "/customers", label: "Customers", icon: "☺" },
+  { href: "/reports", label: "Profit & Loss", icon: "₱", permission: "viewPrivateCosts" },
 ];
 
 function initials(name?: string) {
