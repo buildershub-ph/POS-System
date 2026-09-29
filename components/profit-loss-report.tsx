@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatPeso, invoiceNumber } from "@/lib/mock-data";
-import type { ProfitLossReport as Report } from "@/lib/profit-loss";
+import { itemTypeLabels, summarizeProfitLoss, type ProfitLossItemType, type ProfitLossLine } from "@/lib/profit-loss";
 
 function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -39,10 +39,11 @@ function profitClass(value: number) {
 export function ProfitLossReport() {
   const [from, setFrom] = useState(allTimeFrom);
   const [to, setTo] = useState(today());
-  const [report, setReport] = useState<Report | null>(null);
+  const [lines, setLines] = useState<ProfitLossLine[] | null>(null);
   const [loadedRange, setLoadedRange] = useState("");
   const [error, setError] = useState("");
   const [view, setView] = useState<"items" | "sales">("items");
+  const [typeFilter, setTypeFilter] = useState<"all" | ProfitLossItemType>("all");
   const rangeInvalid = from > to;
   const range = `${from}|${to}`;
   const loading = !rangeInvalid && loadedRange !== range;
@@ -54,15 +55,20 @@ export function ProfitLossReport() {
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error ?? "The report could not be loaded.");
-        return result.data as Report;
+        return result.data as ProfitLossLine[];
       })
-      .then((data) => { if (active) { setReport(data); setError(""); } })
+      .then((data) => { if (active) { setLines(data); setError(""); } })
       .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : "The report could not be loaded."); })
       .finally(() => { if (active) setLoadedRange(`${from}|${to}`); });
     return () => { active = false; };
   }, [from, to, rangeInvalid]);
 
+  const report = useMemo(
+    () => (lines ? summarizeProfitLoss(typeFilter === "all" ? lines : lines.filter((line) => line.type === typeFilter)) : null),
+    [lines, typeFilter],
+  );
   const summary = report?.summary;
+  const typeQuery = typeFilter === "all" ? "" : `&type=${typeFilter}`;
 
   return (
     <section>
@@ -70,7 +76,7 @@ export function ProfitLossReport() {
       <div className="transactions-export">
         <div>
           <h3>Report period</h3>
-          <p>Completed sales only. Cost is each item&apos;s landed cost; custom items count at zero cost.</p>
+          <p>Completed sales only. In-stock items cost their landed cost; custom items cost what they sold for, so they carry no profit.</p>
         </div>
         <div className="transactions-export__controls">
           <label className="field"><span>From</span><input onChange={(event) => setFrom(event.target.value)} type="date" value={from} /></label>
@@ -84,7 +90,7 @@ export function ProfitLossReport() {
           <a
             aria-disabled={rangeInvalid}
             className="button button--primary button--small"
-            href={rangeInvalid ? undefined : `/api/reports/profit-loss?from=${from}&to=${to}&format=csv`}
+            href={rangeInvalid ? undefined : `/api/reports/profit-loss?from=${from}&to=${to}&format=csv${typeQuery}`}
             onClick={(event) => { if (rangeInvalid) event.preventDefault(); }}
           >
             Download CSV
@@ -93,10 +99,18 @@ export function ProfitLossReport() {
         {rangeInvalid && <p className="transactions-export__error">The &ldquo;From&rdquo; date must be on or before the &ldquo;To&rdquo; date.</p>}
       </div>
 
+      <div className="chip-row chip-row--compact pl-type-filter">
+        {(["all", "in_stock", "custom"] as const).map((value) => (
+          <button className={typeFilter === value ? "is-active" : ""} key={value} onClick={() => setTypeFilter(value)} type="button">
+            {value === "all" ? "All items" : itemTypeLabels[value]}
+          </button>
+        ))}
+      </div>
+
       {loading && !report ? (
         <p>Loading report…</p>
       ) : !summary || summary.saleCount === 0 ? (
-        !error && <div className="empty-state"><span>₱</span><h3>No completed sales in this period</h3><p>Pick a wider date range to see profit and loss.</p></div>
+        !error && <div className="empty-state"><span>₱</span><h3>No completed sales in this period</h3><p>Pick a wider date range or a different item type to see profit and loss.</p></div>
       ) : (
         <>
           <div className="pl-statement">
@@ -109,11 +123,12 @@ export function ProfitLossReport() {
               <div><dt>Gross margin</dt><dd>{formatPercent(summary.marginPercent)}</dd></div>
             </dl>
             <ul className="pl-notes">
-              <li>Custom item sales (counted at zero cost): <strong>{formatPeso(summary.customItemSales)}</strong></li>
+              <li>In-stock item sales: <strong>{formatPeso(summary.inStockSales)}</strong></li>
+              <li>Custom item sales (cost = sold price, no profit): <strong>{formatPeso(summary.customItemSales)}</strong></li>
               <li>Net sales still unpaid (pay later): <strong>{formatPeso(summary.unpaidNetSales)}</strong></li>
               {summary.missingCostItemCount > 0 && (
                 <li className="pl-warning">
-                  {summary.missingCostItemCount} catalogue {summary.missingCostItemCount === 1 ? "item has" : "items have"} no cost on file and {summary.missingCostItemCount === 1 ? "was" : "were"} counted at zero cost, so profit on {summary.missingCostItemCount === 1 ? "it" : "them"} is overstated.
+                  {summary.missingCostItemCount} in-stock {summary.missingCostItemCount === 1 ? "item has" : "items have"} no cost on file and {summary.missingCostItemCount === 1 ? "was" : "were"} counted at zero cost, so profit on {summary.missingCostItemCount === 1 ? "it" : "them"} is overstated.
                 </li>
               )}
             </ul>
@@ -134,8 +149,9 @@ export function ProfitLossReport() {
                   <span>
                     <strong>{item.name}</strong>
                     <small>
-                      {item.sku ?? ""}
-                      {item.isCustom && " Custom item · zero cost"}
+                      {itemTypeLabels[item.type]}
+                      {item.sku && ` · ${item.sku}`}
+                      {item.type === "custom" && " · cost = sold price"}
                       {item.missingCost && <em className="pl-warning"> No cost on file</em>}
                     </small>
                   </span>
@@ -147,7 +163,7 @@ export function ProfitLossReport() {
                   <span>{formatPercent(item.marginPercent)}</span>
                 </div>
               ))}
-              <p className="pl-table__footnote">Item sales are before whole-sale discounts, which are subtracted once in the statement above.</p>
+              <p className="pl-table__footnote">Sales are after whole-sale discounts, split across each sale&apos;s items by value.</p>
             </div>
           ) : (
             <div className="pl-table">
@@ -160,14 +176,14 @@ export function ProfitLossReport() {
                     <strong>{invoiceNumber(sale.saleNumber)}</strong>
                     <small>
                       {sale.paymentStatus === "pending" && "Unpaid · "}
-                      {sale.totalDiscount > 0 && `Discount ${formatPeso(sale.totalDiscount)} · `}
+                      {sale.discount > 0 && `Discount ${formatPeso(sale.discount)} · `}
                       {sale.hasCustomItems && "Custom items"}
                       {sale.hasMissingCost && <em className="pl-warning"> Missing cost</em>}
                     </small>
                   </span>
                   <span>{formatDate(sale.createdAt)}</span>
                   <span>{sale.customerName ?? "—"}</span>
-                  <span>{formatPeso(sale.netSales)}</span>
+                  <span>{formatPeso(sale.sales)}</span>
                   <span>{formatPeso(sale.cost)}</span>
                   <span className={profitClass(sale.grossProfit)}><strong>{formatPeso(sale.grossProfit)}</strong></span>
                   <span>{formatPercent(sale.marginPercent)}</span>

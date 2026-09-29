@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { authenticateRequest, isSupabaseConfigured, supabaseRest } from "@/lib/supabase-server";
 import { invoiceNumber } from "@/lib/mock-data";
-import { buildProfitLossReport, type ProfitLossSaleInput } from "@/lib/profit-loss";
+import { buildProfitLossLines, itemTypeLabels, type ProfitLossItemType, type ProfitLossSaleInput } from "@/lib/profit-loss";
 
 type SaleRow = {
   id: string;
@@ -105,63 +105,47 @@ export async function GET(request: NextRequest) {
       actualSellingPrice: number(line.actualSellingPrice),
     })),
   }));
-  const report = buildProfitLossReport(sales, costs);
+  const typeParam = searchParams.get("type");
+  const typeFilter: ProfitLossItemType | null = typeParam === "in_stock" || typeParam === "custom" ? typeParam : null;
+  const lines = buildProfitLossLines(sales, costs).filter((line) => !typeFilter || line.type === typeFilter);
 
   if (searchParams.get("format") !== "csv") {
-    return NextResponse.json({ data: report, from, to });
+    return NextResponse.json({ data: lines, from, to });
   }
 
-  const { summary } = report;
+  // One flat row per item sold, so the file can be filtered/pivoted in a
+  // spreadsheet (e.g. Type = Custom) and every column still sums correctly.
   const money = (value: number) => value.toFixed(2);
-  const percent = (value: number | null) => (value == null ? "" : `${value.toFixed(2)}%`);
   const rows: unknown[][] = [
-    ["Profit and loss", `${from} to ${to}`],
-    [],
-    ["Completed sales", summary.saleCount],
-    ["Gross sales", money(summary.grossSales)],
-    ["Less: whole-sale discounts", money(summary.totalDiscounts)],
-    ["Net sales", money(summary.netSales)],
-    ["Less: cost of goods sold", money(summary.costOfGoodsSold)],
-    ["Gross profit", money(summary.grossProfit)],
-    ["Gross margin", percent(summary.marginPercent)],
-    ["Custom item sales (counted at zero cost)", money(summary.customItemSales)],
-    ["Net sales still unpaid (pay later)", money(summary.unpaidNetSales)],
-    [],
-    ["Invoice", "Date", "Customer", "Payment", "Gross Sales", "Whole-sale Discount", "Net Sales", "Cost", "Gross Profit", "Margin", "Notes"],
-    ...report.sales.map((sale) => [
-      invoiceNumber(sale.saleNumber),
-      sale.createdAt,
-      sale.customerName ?? "",
-      sale.paymentStatus === "pending" ? "Unpaid" : "Paid",
-      money(sale.grossSales),
-      money(sale.totalDiscount),
-      money(sale.netSales),
-      money(sale.cost),
-      money(sale.grossProfit),
-      percent(sale.marginPercent),
-      [sale.hasCustomItems ? "Includes custom items at zero cost" : "", sale.hasMissingCost ? "Some items have no cost on file" : ""]
-        .filter(Boolean)
-        .join("; "),
-    ]),
-    [],
-    ["Item", "SKU", "Type", "Qty Sold", "Unit Cost", "Sales", "Cost", "Gross Profit", "Margin"],
-    ...report.items.map((item) => [
-      item.name,
-      item.sku ?? "",
-      item.isCustom ? "Custom (zero cost)" : item.missingCost ? "Catalogue (no cost on file)" : "Catalogue",
-      item.quantity,
-      money(item.unitCost),
-      money(item.sales),
-      money(item.cost),
-      money(item.grossProfit),
-      percent(item.marginPercent),
+    [
+      "Date", "Invoice", "Customer", "Payment", "Item", "SKU", "Type", "Qty", "Unit Price",
+      "Gross Sales", "Discount", "Net Sales", "Unit Cost", "Cost", "Cost Basis", "Gross Profit", "Margin",
+    ],
+    ...lines.map((line) => [
+      line.createdAt.slice(0, 10),
+      invoiceNumber(line.saleNumber),
+      line.customerName ?? "",
+      line.paymentStatus === "pending" ? "Unpaid" : "Paid",
+      line.name,
+      line.sku ?? "",
+      itemTypeLabels[line.type],
+      line.quantity,
+      money(line.unitPrice),
+      money(line.grossSales),
+      money(line.discount),
+      money(line.sales),
+      money(line.unitCost),
+      money(line.cost),
+      line.type === "custom" ? "Sold price" : line.missingCost ? "No cost on file" : "Landed cost",
+      money(line.grossProfit),
+      line.sales > 0 ? `${((line.grossProfit / line.sales) * 100).toFixed(2)}%` : "",
     ]),
   ];
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
   return new Response(csv, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="builders-hub-profit-and-loss-${from}-to-${to}.csv"`,
+      "content-disposition": `attachment; filename="builders-hub-profit-and-loss-${from}-to-${to}${typeFilter ? `-${typeFilter.replace("_", "-")}` : ""}.csv"`,
     },
   });
 }

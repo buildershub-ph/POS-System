@@ -1,12 +1,23 @@
 // Pure profit-and-loss maths for completed sales, kept free of any I/O so it
-// can be unit-tested and shared by the JSON report and its CSV export.
+// can be unit-tested and shared by the report page and its CSV export.
 //
-// Revenue is what the customer was actually charged: every line at its
-// actual selling price, less any whole-sale discount. Cost of goods sold is
-// quantity x landed cost for catalogue items. Custom items (sold outside the
-// catalogue) have no recorded cost, so they count at zero cost. A catalogue
-// item with no cost on file is also counted at zero but flagged, so the
-// owner can see the profit for it is overstated.
+// Every sold line becomes one flat row, typed "in_stock" (a catalogue item)
+// or "custom" (sold outside the catalogue), so the report and the CSV can be
+// filtered by type. A whole-sale discount is split across the sale's lines in
+// proportion to their value, so each row's sales are what was really charged
+// and any filtered subset still adds up.
+//
+// Cost: in-stock items cost quantity x landed cost. Custom items have no
+// recorded cost, so their cost is whatever they sold for -- they carry no
+// profit. An in-stock item with no cost on file is counted at zero cost and
+// flagged, so the owner can see the profit for it is overstated.
+
+export type ProfitLossItemType = "in_stock" | "custom";
+
+export const itemTypeLabels: Record<ProfitLossItemType, string> = {
+  in_stock: "In-stock",
+  custom: "Custom",
+};
 
 export type ProfitLossLineInput = {
   variantId: string | null;
@@ -27,6 +38,27 @@ export type ProfitLossSaleInput = {
   lines: ProfitLossLineInput[];
 };
 
+export type ProfitLossLine = {
+  saleId: string;
+  saleNumber: number;
+  createdAt: string;
+  customerName: string | null;
+  paymentStatus: "paid" | "pending" | null;
+  itemKey: string;
+  name: string;
+  sku: string | null;
+  type: ProfitLossItemType;
+  missingCost: boolean;
+  quantity: number;
+  unitPrice: number;
+  grossSales: number;
+  discount: number;
+  sales: number;
+  unitCost: number;
+  cost: number;
+  grossProfit: number;
+};
+
 export type ProfitLossSale = {
   id: string;
   saleNumber: number;
@@ -34,8 +66,8 @@ export type ProfitLossSale = {
   customerName: string | null;
   paymentStatus: "paid" | "pending" | null;
   grossSales: number;
-  totalDiscount: number;
-  netSales: number;
+  discount: number;
+  sales: number;
   cost: number;
   grossProfit: number;
   marginPercent: number | null;
@@ -47,7 +79,7 @@ export type ProfitLossItem = {
   key: string;
   name: string;
   sku: string | null;
-  isCustom: boolean;
+  type: ProfitLossItemType;
   missingCost: boolean;
   quantity: number;
   unitCost: number;
@@ -65,7 +97,7 @@ export type ProfitLossSummary = {
   costOfGoodsSold: number;
   grossProfit: number;
   marginPercent: number | null;
-  catalogueSales: number;
+  inStockSales: number;
   customItemSales: number;
   unpaidNetSales: number;
   missingCostItemCount: number;
@@ -81,116 +113,157 @@ function round(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function margin(profit: number, revenue: number) {
+export function marginPercent(profit: number, revenue: number) {
   return revenue > 0 ? round((profit / revenue) * 100) : null;
 }
 
-/** `costs` maps a catalogue variant id to its per-unit cost. */
-export function buildProfitLossReport(
-  sales: ProfitLossSaleInput[],
-  costs: Map<string, number>,
-): ProfitLossReport {
-  const items = new Map<string, ProfitLossItem>();
-  const saleRows: ProfitLossSale[] = [];
-  let catalogueSales = 0;
-  let customItemSales = 0;
-
+/** One row per sold line. `costs` maps a catalogue variant id to its per-unit cost. */
+export function buildProfitLossLines(sales: ProfitLossSaleInput[], costs: Map<string, number>): ProfitLossLine[] {
+  const rows: ProfitLossLine[] = [];
   for (const sale of sales) {
-    let grossSales = 0;
-    let cost = 0;
-    let hasCustomItems = false;
-    let hasMissingCost = false;
+    const lineGross = sale.lines.map((line) => round(line.quantity * line.actualSellingPrice));
+    const saleGross = lineGross.reduce((total, value) => total + value, 0);
+    // Capped at the line total when the sale is recorded; this only guards
+    // against bad historical data.
+    const saleDiscount = round(Math.min(Math.max(sale.totalDiscountAmount, 0), saleGross));
+    let discountLeft = saleDiscount;
 
-    for (const line of sale.lines) {
-      const lineSales = line.quantity * line.actualSellingPrice;
-      const isCustom = !line.variantId;
+    sale.lines.forEach((line, index) => {
+      const grossSales = lineGross[index];
+      const isLast = index === sale.lines.length - 1;
+      // The last line takes whatever is left so the split adds up exactly.
+      const discount = saleGross > 0
+        ? (isLast ? round(discountLeft) : round((saleDiscount * grossSales) / saleGross))
+        : 0;
+      discountLeft -= discount;
+      const salesValue = round(grossSales - discount);
+
+      const type: ProfitLossItemType = line.variantId ? "in_stock" : "custom";
       const knownCost = line.variantId ? costs.get(line.variantId) : undefined;
-      const missingCost = !isCustom && knownCost === undefined;
-      const unitCost = knownCost ?? 0;
-      const lineCost = line.quantity * unitCost;
+      const missingCost = type === "in_stock" && knownCost === undefined;
+      const cost = type === "custom" ? salesValue : round(line.quantity * (knownCost ?? 0));
+      const unitCost = type === "custom"
+        ? (line.quantity > 0 ? round(salesValue / line.quantity) : 0)
+        : knownCost ?? 0;
 
-      grossSales += lineSales;
-      cost += lineCost;
-      if (isCustom) {
-        hasCustomItems = true;
-        customItemSales += lineSales;
-      } else {
-        catalogueSales += lineSales;
-      }
-      if (missingCost) hasMissingCost = true;
-
-      const key = line.variantId ?? `custom:${(line.customItemName ?? "custom item").trim().toLowerCase()}`;
-      const item = items.get(key) ?? {
-        key,
-        name: (isCustom ? line.customItemName : line.productName) ?? "Unnamed item",
+      rows.push({
+        saleId: sale.id,
+        saleNumber: sale.saleNumber,
+        createdAt: sale.createdAt,
+        customerName: sale.customerName,
+        paymentStatus: sale.paymentStatus,
+        itemKey: line.variantId ?? `custom:${(line.customItemName ?? "custom item").trim().toLowerCase()}`,
+        name: (type === "custom" ? line.customItemName : line.productName) ?? "Unnamed item",
         sku: line.sku,
-        isCustom,
+        type,
         missingCost,
-        quantity: 0,
+        quantity: line.quantity,
+        unitPrice: line.actualSellingPrice,
+        grossSales,
+        discount,
+        sales: salesValue,
         unitCost,
-        sales: 0,
-        cost: 0,
-        grossProfit: 0,
-        marginPercent: null,
-      };
-      item.quantity += line.quantity;
-      item.sales += lineSales;
-      item.cost += lineCost;
-      items.set(key, item);
-    }
-
-    // The whole-sale discount is capped at the line total when the sale is
-    // recorded, so this only guards against bad historical data.
-    const totalDiscount = Math.min(sale.totalDiscountAmount, grossSales);
-    const netSales = grossSales - totalDiscount;
-    const grossProfit = netSales - cost;
-    saleRows.push({
-      id: sale.id,
-      saleNumber: sale.saleNumber,
-      createdAt: sale.createdAt,
-      customerName: sale.customerName,
-      paymentStatus: sale.paymentStatus,
-      grossSales: round(grossSales),
-      totalDiscount: round(totalDiscount),
-      netSales: round(netSales),
-      cost: round(cost),
-      grossProfit: round(grossProfit),
-      marginPercent: margin(grossProfit, netSales),
-      hasCustomItems,
-      hasMissingCost,
+        cost,
+        grossProfit: round(salesValue - cost),
+      });
     });
   }
+  return rows;
+}
+
+/** Totals, per-sale and per-item breakdowns for any (possibly filtered) set of lines. */
+export function summarizeProfitLoss(lines: ProfitLossLine[]): ProfitLossReport {
+  const sales = new Map<string, ProfitLossSale>();
+  const items = new Map<string, ProfitLossItem>();
+
+  for (const line of lines) {
+    const sale = sales.get(line.saleId) ?? {
+      id: line.saleId,
+      saleNumber: line.saleNumber,
+      createdAt: line.createdAt,
+      customerName: line.customerName,
+      paymentStatus: line.paymentStatus,
+      grossSales: 0,
+      discount: 0,
+      sales: 0,
+      cost: 0,
+      grossProfit: 0,
+      marginPercent: null,
+      hasCustomItems: false,
+      hasMissingCost: false,
+    };
+    sale.grossSales += line.grossSales;
+    sale.discount += line.discount;
+    sale.sales += line.sales;
+    sale.cost += line.cost;
+    sale.hasCustomItems ||= line.type === "custom";
+    sale.hasMissingCost ||= line.missingCost;
+    sales.set(line.saleId, sale);
+
+    const item = items.get(line.itemKey) ?? {
+      key: line.itemKey,
+      name: line.name,
+      sku: line.sku,
+      type: line.type,
+      missingCost: line.missingCost,
+      quantity: 0,
+      unitCost: line.unitCost,
+      sales: 0,
+      cost: 0,
+      grossProfit: 0,
+      marginPercent: null,
+    };
+    item.quantity += line.quantity;
+    item.sales += line.sales;
+    item.cost += line.cost;
+    items.set(line.itemKey, item);
+  }
+
+  const saleRows = [...sales.values()].map((sale) => {
+    const grossProfit = sale.sales - sale.cost;
+    return {
+      ...sale,
+      grossSales: round(sale.grossSales),
+      discount: round(sale.discount),
+      sales: round(sale.sales),
+      cost: round(sale.cost),
+      grossProfit: round(grossProfit),
+      marginPercent: marginPercent(grossProfit, sale.sales),
+    };
+  });
 
   const itemRows = [...items.values()]
     .map((item) => {
       const grossProfit = item.sales - item.cost;
       return {
         ...item,
+        // A custom item's cost tracks its price, so show the average.
+        unitCost: item.type === "custom" && item.quantity > 0 ? round(item.cost / item.quantity) : item.unitCost,
         quantity: round(item.quantity),
         sales: round(item.sales),
         cost: round(item.cost),
         grossProfit: round(grossProfit),
-        marginPercent: margin(grossProfit, item.sales),
+        marginPercent: marginPercent(grossProfit, item.sales),
       };
     })
-    .sort((a, b) => b.grossProfit - a.grossProfit);
+    .sort((a, b) => b.grossProfit - a.grossProfit || b.sales - a.sales);
 
-  const sum = (pick: (sale: ProfitLossSale) => number) => round(saleRows.reduce((total, sale) => total + pick(sale), 0));
-  const netSales = sum((sale) => sale.netSales);
-  const grossProfit = sum((sale) => sale.grossProfit);
+  const sum = (pick: (line: ProfitLossLine) => number) => round(lines.reduce((total, line) => total + pick(line), 0));
+  const netSales = sum((line) => line.sales);
+  const grossProfit = sum((line) => line.grossProfit);
 
   return {
     summary: {
       saleCount: saleRows.length,
-      grossSales: sum((sale) => sale.grossSales),
-      totalDiscounts: sum((sale) => sale.totalDiscount),
+      grossSales: sum((line) => line.grossSales),
+      totalDiscounts: sum((line) => line.discount),
       netSales,
-      costOfGoodsSold: sum((sale) => sale.cost),
+      costOfGoodsSold: sum((line) => line.cost),
       grossProfit,
-      marginPercent: margin(grossProfit, netSales),
-      catalogueSales: round(catalogueSales),
-      customItemSales: round(customItemSales),
-      unpaidNetSales: sum((sale) => (sale.paymentStatus === "pending" ? sale.netSales : 0)),
+      marginPercent: marginPercent(grossProfit, netSales),
+      inStockSales: sum((line) => (line.type === "in_stock" ? line.sales : 0)),
+      customItemSales: sum((line) => (line.type === "custom" ? line.sales : 0)),
+      unpaidNetSales: sum((line) => (line.paymentStatus === "pending" ? line.sales : 0)),
       missingCostItemCount: itemRows.filter((item) => item.missingCost).length,
     },
     sales: saleRows,
