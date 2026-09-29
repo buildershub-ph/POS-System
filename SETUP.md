@@ -27,6 +27,7 @@ What each migration does, briefly:
 | `0002`–`0007` | Auth wiring, Google-Sheets sync support, receiving workflow, supplier/photo fields. |
 | `0008` | Adds **display-only / order-by-request** items (`availability` column) and **multi-branch locations** — Canlalay Branch and Kosch Warehouse are added as Sister Company sites alongside the main store's Showroom/Warehouse/Display. |
 | `0009` | **Wipes the old demo/sample catalogue** and loads the real 54-item Builders Hub catalogue (tiles, ceiling panels, fluted panels, doors, door jambs) with the actual costs, SRPs, and on-hand quantities from the inventory sheet, all at the Main Showroom. |
+| `0025` | Adds a **Sales Order (SO) number** to each sale, typed in from the paper receipt on the Transactions page. |
 
 ## 3. Create the owner's login
 

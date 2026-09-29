@@ -31,6 +31,7 @@ export type ProfitLossLineInput = {
 export type ProfitLossSaleInput = {
   id: string;
   saleNumber: number;
+  salesOrderNumber?: string | null;
   createdAt: string;
   customerName: string | null;
   paymentStatus: "paid" | "pending" | null;
@@ -41,6 +42,7 @@ export type ProfitLossSaleInput = {
 export type ProfitLossLine = {
   saleId: string;
   saleNumber: number;
+  salesOrderNumber: string | null;
   createdAt: string;
   customerName: string | null;
   paymentStatus: "paid" | "pending" | null;
@@ -62,6 +64,7 @@ export type ProfitLossLine = {
 export type ProfitLossSale = {
   id: string;
   saleNumber: number;
+  salesOrderNumber: string | null;
   createdAt: string;
   customerName: string | null;
   paymentStatus: "paid" | "pending" | null;
@@ -149,6 +152,7 @@ export function buildProfitLossLines(sales: ProfitLossSaleInput[], costs: Map<st
       rows.push({
         saleId: sale.id,
         saleNumber: sale.saleNumber,
+        salesOrderNumber: sale.salesOrderNumber ?? null,
         createdAt: sale.createdAt,
         customerName: sale.customerName,
         paymentStatus: sale.paymentStatus,
@@ -180,6 +184,7 @@ export function summarizeProfitLoss(lines: ProfitLossLine[]): ProfitLossReport {
     const sale = sales.get(line.saleId) ?? {
       id: line.saleId,
       saleNumber: line.saleNumber,
+      salesOrderNumber: line.salesOrderNumber,
       createdAt: line.createdAt,
       customerName: line.customerName,
       paymentStatus: line.paymentStatus,

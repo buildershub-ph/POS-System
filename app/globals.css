@@ -124,7 +124,21 @@ button { color: inherit; }
 .transaction-card__head { align-items: center; display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 12px; }
 .transaction-card__head > div { align-items: center; display: flex; gap: 10px; }
 .transaction-card__head strong { font-size: 15px; }
-.transaction-card__head > span { color: var(--muted); }
+.transaction-card__head > span, .transaction-card__head-right > span { color: var(--muted); }
+.transaction-card__head-right { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.so-number-chip { background: #fff; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); cursor: pointer; font-size: 11px; min-height: 30px; padding: 0 12px; }
+.so-number-chip strong { font-size: 12px; }
+.so-number-chip:hover:not(:disabled) { border-color: var(--yellow-dark); }
+.so-number-chip:disabled { cursor: default; }
+.so-number-chip--empty { border-style: dashed; color: var(--yellow-dark); font-weight: 700; }
+.so-number-form { align-items: center; display: flex; gap: 6px; }
+.so-number-form label { align-items: center; display: flex; gap: 6px; font-size: 11px; font-weight: 700; }
+.so-number-form input { border: 1px solid #d9d9d9; border-radius: 8px; font-size: 12px; min-height: 32px; outline: 0; padding: 0 10px; width: 150px; }
+.so-number-form input:focus { border-color: var(--yellow-dark); box-shadow: 0 0 0 3px var(--yellow-soft); }
+@media (max-width: 640px) {
+  .transaction-card__head { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .transaction-card__head-right { justify-content: flex-start; }
+}
 .transaction-status { border-radius: 999px; font-size: 10px; font-weight: 800; padding: 3px 10px; text-transform: uppercase; }
 .transaction-status--completed { background: var(--green-soft); color: var(--green); }
 .transaction-status--held, .transaction-status--quotation { background: var(--amber-soft); color: var(--amber); }

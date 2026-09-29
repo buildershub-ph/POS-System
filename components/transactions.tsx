@@ -21,6 +21,7 @@ const historyActionLabels: Record<SaleHistoryAction, string> = {
   completed: "Reservation completed — stock deducted",
   cancelled: "Sale cancelled",
   payment_recorded: "Payment recorded",
+  sales_order_number_set: "SO number updated",
 };
 
 function formatDate(value: string) {
@@ -70,6 +71,9 @@ export function Transactions() {
   const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
   const [recordPaymentMethod, setRecordPaymentMethod] = useState<PaymentMethod>("cash");
   const [recordPaymentDate, setRecordPaymentDate] = useState(today());
+  const [editingSoId, setEditingSoId] = useState<string | null>(null);
+  const [soDraft, setSoDraft] = useState("");
+  const [savingSoId, setSavingSoId] = useState<string | null>(null);
   const canCancel = can(user.role, "transferStock");
   const canProcessSale = can(user.role, "processSale");
 
@@ -123,6 +127,33 @@ export function Transactions() {
       setError(reason instanceof Error ? reason.message : "Sale could not be completed.");
     } finally {
       setPayingId(null);
+    }
+  }
+
+  async function saveSalesOrderNumber(sale: SaleRecord) {
+    setSavingSoId(sale.id);
+    setError("");
+    try {
+      const response = await fetch(`/api/sales/${sale.id}/sales-order-number`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ salesOrderNumber: soDraft }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "The SO number could not be saved.");
+      const saved = (result.data?.salesOrderNumber as string | null) ?? undefined;
+      setSales((current) => current.map((item) => (item.id === sale.id ? { ...item, salesOrderNumber: saved } : item)));
+      // Drop the cached history so it reloads with the new entry.
+      setHistoryBySale((current) => {
+        const next = { ...current };
+        delete next[sale.id];
+        return next;
+      });
+      setEditingSoId(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The SO number could not be saved.");
+    } finally {
+      setSavingSoId(null);
     }
   }
 
@@ -246,7 +277,27 @@ export function Transactions() {
                     )}
                     {sale.hasPreorderItems && <span className="transaction-status transaction-status--preorder">Has Pre-order</span>}
                   </div>
-                  <span>{formatDate(sale.createdAt)}</span>
+                  <div className="transaction-card__head-right">
+                    <span>{formatDate(sale.createdAt)}</span>
+                    {editingSoId === sale.id ? (
+                      <form className="so-number-form" onSubmit={(event) => { event.preventDefault(); saveSalesOrderNumber(sale); }}>
+                        <label>
+                          <span>SO #</span>
+                          <input aria-label="Sales order number" autoFocus maxLength={50} onChange={(event) => setSoDraft(event.target.value)} placeholder="From paper receipt" value={soDraft} />
+                        </label>
+                        <button className="button button--secondary button--small" onClick={() => setEditingSoId(null)} type="button">Cancel</button>
+                        <button className="button button--primary button--small" disabled={savingSoId === sale.id} type="submit">{savingSoId === sale.id ? "Saving…" : "Save"}</button>
+                      </form>
+                    ) : sale.salesOrderNumber ? (
+                      <button className="so-number-chip" disabled={!canProcessSale} onClick={() => { setEditingSoId(sale.id); setSoDraft(sale.salesOrderNumber ?? ""); }} title={canProcessSale ? "Edit SO number" : undefined} type="button">
+                        SO # <strong>{sale.salesOrderNumber}</strong>{canProcessSale && <span aria-hidden="true"> ✎</span>}
+                      </button>
+                    ) : canProcessSale ? (
+                      <button className="so-number-chip so-number-chip--empty" onClick={() => { setEditingSoId(sale.id); setSoDraft(""); }} type="button">
+                        + Add SO number
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="transaction-card__body">
                   <div>

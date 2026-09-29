@@ -7,6 +7,7 @@ import { buildProfitLossLines, itemTypeLabels, type ProfitLossItemType, type Pro
 type SaleRow = {
   id: string;
   sale_number: number;
+  sales_order_number?: string | null;
   created_at: string;
   customer_name: string | null;
   // select=* like the other sales routes, so a database that hasn't run
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
   const sales: ProfitLossSaleInput[] = saleRows.map((row) => ({
     id: row.id,
     saleNumber: row.sale_number,
+    salesOrderNumber: row.sales_order_number ?? null,
     createdAt: row.created_at,
     customerName: row.customer_name,
     paymentStatus: row.payment_status ?? null,
@@ -118,12 +120,13 @@ export async function GET(request: NextRequest) {
   const money = (value: number) => value.toFixed(2);
   const rows: unknown[][] = [
     [
-      "Date", "Invoice", "Customer", "Payment", "Item", "SKU", "Type", "Qty", "Unit Price",
+      "Date", "Invoice", "SO Number", "Customer", "Payment", "Item", "SKU", "Type", "Qty", "Unit Price",
       "Gross Sales", "Discount", "Net Sales", "Unit Cost", "Cost", "Cost Basis", "Gross Profit", "Margin",
     ],
     ...lines.map((line) => [
       line.createdAt.slice(0, 10),
       invoiceNumber(line.saleNumber),
+      line.salesOrderNumber ?? "",
       line.customerName ?? "",
       line.paymentStatus === "pending" ? "Unpaid" : "Paid",
       line.name,
