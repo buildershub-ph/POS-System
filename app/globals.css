@@ -256,12 +256,13 @@ button { color: inherit; }
 .pl-statement dd { font-variant-numeric: tabular-nums; margin: 0; }
 .pl-statement__subtotal { font-weight: 700; }
 .pl-statement__total { border-top: 2px solid var(--ink)!important; font-size: 16px!important; font-weight: 800; }
-.pl-notes { color: var(--muted); display: grid; font-size: 12px; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.pl-notes { align-content: start; color: var(--muted); display: grid; font-size: 12px; gap: 10px; list-style: none; margin: 0; padding: 0; }
 .pl-notes strong { color: var(--ink); }
 .pl-positive { color: var(--green); }
 .pl-negative { color: var(--red); }
 .pl-warning { color: var(--amber); font-style: normal; }
 .pl-tabs { margin-bottom: 0; }
+.pl-type-filter { margin-top: 0; }
 .pl-table { background: #fff; border: 1px solid var(--line); border-radius: 12px; margin-top: 12px; overflow: hidden; }
 .pl-table__header, .pl-table__row { display: grid; gap: 10px; padding: 12px 16px; }
 .pl-table__row--items { grid-template-columns: 2.4fr .6fr 1fr 1fr 1fr 1fr .7fr; }
